@@ -23,6 +23,8 @@ import {
   Shield,
   Settings,
   Route,
+  Sparkles,
+  Languages,
 } from 'lucide-react';
 import type { StaffRole } from '@/shared/api/types';
 
@@ -166,7 +168,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         to: '/splizer',
         labelKey: 'nav.splizer',
-        roles: ['splizer'],
+        roles: ['admin', 'ops_manager', 'splizer'],
         icon: Split,
       },
     ],
@@ -186,6 +188,18 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'nav.notifications',
         roles: ['admin', 'ops_manager', 'support', 'splizer', 'driver'],
         icon: Bell,
+      },
+      {
+        to: '/ai-parser',
+        labelKey: 'nav.aiParser',
+        roles: ['admin', 'ops_manager', 'support'],
+        icon: Sparkles,
+      },
+      {
+        to: '/russia-chatbot',
+        labelKey: 'nav.russiaChatbot',
+        roles: ['admin', 'ops_manager', 'support'],
+        icon: Languages,
       },
       {
         to: '/ai',

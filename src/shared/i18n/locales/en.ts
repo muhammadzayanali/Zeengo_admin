@@ -73,6 +73,8 @@ const en = {
     roles: 'Roles',
     settings: 'Settings',
     ai: 'Ops Agent',
+    aiParser: 'AI Parser',
+    russiaChatbot: 'Russia Chatbot',
     email: 'Email',
     mySchedule: 'My schedule',
   },

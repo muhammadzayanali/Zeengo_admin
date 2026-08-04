@@ -1,218 +1,137 @@
-import { FormEvent, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { driversApi } from '../services/drivers.api';
+import { useMemo, useState } from 'react';
+import { Phone } from 'lucide-react';
+import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
+import type { OpsDriverStatus } from '@/ops-demo/store';
 import {
   Button,
-  Card,
   DialogShell,
-  EmptyState,
-  ErrorState,
-  Input,
-  Label,
   PageScaffold,
-  Pagination,
   SearchBar,
-  Skeleton,
+  Select,
   StatsCard,
   StatusBadge,
   useToast,
+  type StatusTone,
 } from '@/shared/ui';
-import { ApiClientError } from '@/shared/api/client';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+
+function tone(s: OpsDriverStatus): StatusTone {
+  if (s === 'AVAILABLE') return 'success';
+  if (s === 'EN_ROUTE') return 'accent';
+  if (s === 'RESTING') return 'warning';
+  return 'default';
+}
 
 export function DriversPage() {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const snap = useOpsSnapshot();
   const { push } = useToast();
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search);
-  const [page, setPage] = useState(1);
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [matchOpen, setMatchOpen] = useState(false);
+  const [clientId, setClientId] = useState('');
+  const [driverId, setDriverId] = useState('');
 
-  const driversQuery = useQuery({
-    queryKey: ['drivers', { page, search: debouncedSearch }],
-    queryFn: ({ signal }) =>
-      driversApi.list({ page, limit: 20, search: debouncedSearch || undefined }, signal),
-  });
+  const filtered = useMemo(() => {
+    return snap.drivers.filter((d) =>
+      `${d.name} ${d.phone} ${d.plate}`.toLowerCase().includes(q.toLowerCase()),
+    );
+  }, [snap.drivers, q]);
 
-  const positionsQuery = useQuery({
-    queryKey: ['drivers', 'live-positions'],
-    queryFn: ({ signal }) => driversApi.livePositions(signal),
-    refetchInterval: 30_000,
-  });
-
-  const availableCount = useMemo(
-    () => (driversQuery.data?.data ?? []).filter((d) => d.status === 'available').length,
-    [driversQuery.data],
-  );
-
-  async function handleAssign(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setFormError(null);
-    const form = new FormData(e.currentTarget);
-    setSubmitting(true);
-    try {
-      await driversApi.assign({
-        bookingId: String(form.get('bookingId') || ''),
-        driverId: String(form.get('driverId') || ''),
-        startDate: String(form.get('startDate') || ''),
-        endDate: String(form.get('endDate') || '') || undefined,
-      });
-      push({ tone: 'success', title: t('drivers.assigned') });
-      setAssignOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['drivers'] });
-    } catch (error) {
-      setFormError(error instanceof ApiClientError ? error.message : t('drivers.assignFailed'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const unassigned = snap.clients.filter((c) => c.status === 'active' && !c.driverId);
+  const available = snap.drivers.filter((d) => d.status === 'AVAILABLE');
 
   return (
     <PageScaffold
-      title={t('drivers.title')}
-      description={t('drivers.description')}
-      primaryAction={<Button onClick={() => setAssignOpen(true)}>{t('drivers.assign')}</Button>}
+      title="Drivers"
+      description="Roster, live status, and manual match engine for unassigned clients."
+      primaryAction={
+        <Button type="button" onClick={() => setMatchOpen(true)}>
+          Match unassigned ({unassigned.length})
+        </Button>
+      }
       stats={
-        driversQuery.data ? (
-          <>
-            <StatsCard label={t('bookings.total')} value={driversQuery.data.meta.total} />
-            <StatsCard label={t('common.active')} value={availableCount} tone="success" />
-            <StatsCard
-              label={t('drivers.livePositions')}
-              value={positionsQuery.data?.length ?? 0}
-              tone="accent"
-            />
-          </>
-        ) : undefined
-      }
-      filters={
-        <SearchBar
-          className="max-w-xs"
-          placeholder={t('drivers.searchPlaceholder')}
-          value={search}
-          onChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
-        />
-      }
-    >
-      <Card>
-        <h2 className="text-lg font-bold">{t('drivers.livePositions')}</h2>
-        <div className="mt-4 flex flex-col gap-2">
-          {positionsQuery.isLoading ? (
-            <Skeleton className="h-10" />
-          ) : !positionsQuery.data?.length ? (
-            <p className="text-sm text-[var(--ink-muted)]">{t('drivers.noGps')}</p>
-          ) : (
-            positionsQuery.data.map((pos) => (
-              <div
-                key={pos.driverId}
-                className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm"
-              >
-                <span className="font-semibold">{pos.driverName}</span>
-                <span className="text-[var(--ink-muted)]">
-                  {pos.lat.toFixed(4)}, {pos.lng.toFixed(4)}
-                </span>
-                <StatusBadge tone="accent">{pos.status}</StatusBadge>
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
-
-      {driversQuery.isLoading ? (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16" />
-          ))}
-        </div>
-      ) : driversQuery.isError ? (
-        <ErrorState
-          description={t('drivers.loadFailed')}
-          onRetry={() => driversQuery.refetch()}
-        />
-      ) : !driversQuery.data?.data.length ? (
-        <EmptyState title={t('drivers.empty')} />
-      ) : (
         <>
-          <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-[var(--bg-muted)] text-xs font-medium uppercase text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-3">{t('common.name')}</th>
-                  <th className="px-4 py-3">{t('drivers.vehicle')}</th>
-                  <th className="px-4 py-3">{t('drivers.plate')}</th>
-                  <th className="px-4 py-3">{t('drivers.trips')}</th>
-                  <th className="px-4 py-3">{t('common.status')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {driversQuery.data.data.map((driver) => (
-                  <tr key={driver.id} className="hover:bg-[var(--bg-muted)]/70">
-                    <td className="px-4 py-3 font-semibold">{driver.user.fullName}</td>
-                    <td className="px-4 py-3 text-[var(--ink-muted)]">
-                      {[driver.vehicleMake, driver.vehicleModel].filter(Boolean).join(' ') || '—'}
-                    </td>
-                    <td className="px-4 py-3">{driver.plateNumber ?? '—'}</td>
-                    <td className="px-4 py-3">{driver.tripsCount}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge tone={driver.status === 'available' ? 'success' : 'default'}>
-                        {driver.status}
-                      </StatusBadge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4">
-            <Pagination
-              page={driversQuery.data.meta.page}
-              limit={driversQuery.data.meta.limit}
-              total={driversQuery.data.meta.total}
-              onPageChange={setPage}
-            />
-          </div>
+          <StatsCard label="Available" value={snap.drivers.filter((d) => d.status === 'AVAILABLE').length} tone="success" />
+          <StatsCard label="En route" value={snap.drivers.filter((d) => d.status === 'EN_ROUTE').length} tone="accent" />
+          <StatsCard label="Resting" value={snap.drivers.filter((d) => d.status === 'RESTING').length} tone="warning" />
+          <StatsCard label="Off duty" value={snap.drivers.filter((d) => d.status === 'OFF_DUTY').length} />
         </>
-      )}
+      }
+      filters={<SearchBar value={q} onChange={setQ} placeholder="Driver, plate…" className="max-w-sm" />}
+    >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((d) => (
+          <div
+            key={d.id}
+            className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">{d.name}</p>
+                <p className="text-sm text-[var(--ink-muted)]">{d.vehicle} · {d.plate}</p>
+              </div>
+              <StatusBadge tone={tone(d.status)}>{d.status.replace('_', ' ')}</StatusBadge>
+            </div>
+            <a href={`tel:${d.phone}`} className="mt-2 inline-flex items-center gap-1 text-sm text-[var(--accent)]">
+              <Phone className="h-3.5 w-3.5" /> {d.phone}
+            </a>
+            <p className="mt-2 text-xs text-[var(--ink-muted)]">
+              Rating {d.rating} · {d.assignmentId ?? 'No assignment'} · {d.passengerName ?? '—'}
+            </p>
+            <div className="mt-3">
+              <Select
+                value={d.status}
+                onChange={(e) => {
+                  void ops.updateDriverStatus(d.id, e.target.value as OpsDriverStatus).then(() =>
+                    push({ tone: 'success', title: 'Status updated' }),
+                  );
+                }}
+              >
+                <option value="AVAILABLE">AVAILABLE</option>
+                <option value="EN_ROUTE">EN ROUTE</option>
+                <option value="RESTING">RESTING</option>
+                <option value="OFF_DUTY">OFF DUTY</option>
+              </Select>
+            </div>
+          </div>
+        ))}
+      </div>
 
-      <DialogShell
-        open={assignOpen}
-        title={t('drivers.assign')}
-        onClose={() => setAssignOpen(false)}
-      >
-        <form onSubmit={handleAssign} className="flex flex-col gap-4">
+      <DialogShell open={matchOpen} title="Match engine — assign AVAILABLE drivers" onClose={() => setMatchOpen(false)} wide>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="assignBookingId">{t('payments.bookingId')}</Label>
-            <Input id="assignBookingId" name="bookingId" required />
-          </div>
-          <div>
-            <Label htmlFor="assignDriverId">{t('bookings.driver')}</Label>
-            <Input id="assignDriverId" name="driverId" required />
+            <p className="mb-2 text-xs font-semibold uppercase text-[var(--ink-muted)]">Unassigned clients ({unassigned.length})</p>
+            <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
+              <option value="">Select client</option>
+              {unassigned.map((c) => (
+                <option key={c.id} value={c.id}>{c.znCode} · {c.fullName}</option>
+              ))}
+            </Select>
           </div>
           <div>
-            <Label htmlFor="assignStartDate">{t('drivers.start')}</Label>
-            <Input id="assignStartDate" name="startDate" type="date" required />
+            <p className="mb-2 text-xs font-semibold uppercase text-[var(--ink-muted)]">Available drivers ({available.length})</p>
+            <Select value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+              <option value="">Select driver</option>
+              {available.map((d) => (
+                <option key={d.id} value={d.id}>{d.name} · nearest GPS demo</option>
+              ))}
+            </Select>
           </div>
-          <div>
-            <Label htmlFor="assignEndDate">{t('drivers.end')}</Label>
-            <Input id="assignEndDate" name="endDate" type="date" />
-          </div>
-          {formError ? <p className="text-sm text-[var(--danger)]">{formError}</p> : null}
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setAssignOpen(false)}>
-              {t('cancel')}
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {t('drivers.assign')}
-            </Button>
-          </div>
-        </form>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setMatchOpen(false)}>Cancel</Button>
+          <Button
+            type="button"
+            disabled={!clientId || !driverId}
+            onClick={async () => {
+              await ops.assignDriverToClient(clientId, driverId);
+              push({ tone: 'success', title: 'Client assigned' });
+              setMatchOpen(false);
+              setClientId('');
+              setDriverId('');
+            }}
+          >
+            Confirm assign
+          </Button>
+        </div>
       </DialogShell>
     </PageScaffold>
   );

@@ -75,6 +75,8 @@ const ar: TranslationSchema = {
     roles: 'الأدوار',
     settings: 'الإعدادات',
     ai: 'وكيل العمليات',
+    aiParser: 'محلل الذكاء الاصطناعي',
+    russiaChatbot: 'بوت روسيا',
     email: 'البريد',
     mySchedule: 'جدولي',
   },

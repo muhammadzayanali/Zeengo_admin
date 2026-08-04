@@ -104,8 +104,16 @@ const SettingsPage = lazy(() =>
 const AiPage = lazy(() =>
   import('@/features/ai/pages/AiPage').then((m) => ({ default: m.AiPage })),
 );
+const AiParserPage = lazy(() =>
+  import('@/features/ai/pages/AiParserPage').then((m) => ({ default: m.AiParserPage })),
+);
+const RussiaChatbotPage = lazy(() =>
+  import('@/features/ai/pages/RussiaChatbotPage').then((m) => ({
+    default: m.RussiaChatbotPage,
+  })),
+);
 const OperationsRoomPage = lazy(() =>
-  import('@/features/stubs/pages/StubPages').then((m) => ({
+  import('@/features/ops-room/pages/OperationsRoomPage').then((m) => ({
     default: m.OperationsRoomPage,
   })),
 );
@@ -116,7 +124,7 @@ const RolesPage = lazy(() =>
   import('@/features/stubs/pages/StubPages').then((m) => ({ default: m.RolesPage })),
 );
 const EmailPage = lazy(() =>
-  import('@/features/stubs/pages/StubPages').then((m) => ({ default: m.EmailPage })),
+  import('@/features/tools/pages/EmailPage').then((m) => ({ default: m.EmailPage })),
 );
 
 function Fallback() {
@@ -315,10 +323,50 @@ export function AppRouter() {
             }
           />
           <Route
+            path="/ai-parser"
+            element={
+              <L>
+                <AiParserPage />
+              </L>
+            }
+          />
+          <Route
+            path="/russia-chatbot"
+            element={
+              <L>
+                <RussiaChatbotPage />
+              </L>
+            }
+          />
+          <Route
             path="/operations-room"
             element={
               <L>
                 <OperationsRoomPage />
+              </L>
+            }
+          />
+          <Route
+            path="/operations"
+            element={
+              <L>
+                <OperationsRoomPage />
+              </L>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <L>
+                <DashboardPage />
+              </L>
+            }
+          />
+          <Route
+            path="/zeen-rafeq"
+            element={
+              <L>
+                <VipPage />
               </L>
             }
           />

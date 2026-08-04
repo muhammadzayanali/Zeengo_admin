@@ -1,141 +1,237 @@
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { sosApi } from '../services/sos.api';
+import { useMemo, useState } from 'react';
+import { FolderOpen, MessageSquare, CheckCircle2, Phone } from 'lucide-react';
+import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
 import {
   Button,
-  Card,
-  EmptyState,
-  ErrorState,
+  DetailDrawer,
+  DialogShell,
+  Label,
   PageScaffold,
-  Pagination,
+  SearchBar,
   Select,
-  Skeleton,
-  StatsCard,
   StatusBadge,
+  TabBar,
+  Textarea,
   useToast,
 } from '@/shared/ui';
-import { ApiClientError } from '@/shared/api/client';
-import { formatDate } from '@/shared/lib/cn';
 
 export function SosPage() {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const snap = useOpsSnapshot();
   const { push } = useToast();
-  const [status, setStatus] = useState('active');
-  const [page, setPage] = useState(1);
-  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [tab, setTab] = useState('active');
+  const [q, setQ] = useState('');
+  const [fileId, setFileId] = useState<string | null>(null);
+  const [resolveId, setResolveId] = useState<string | null>(null);
+  const [phoneAttempt, setPhoneAttempt] = useState('yes');
+  const [driverId, setDriverId] = useState('');
+  const [emergency, setEmergency] = useState('');
+  const [notes, setNotes] = useState('');
 
-  const sosQuery = useQuery({
-    queryKey: ['sos', { page, status }],
-    queryFn: ({ signal }) =>
-      sosApi.list({ page, limit: 20, status: status || undefined }, signal),
-    refetchInterval: 20_000,
-  });
+  const list = useMemo(() => {
+    const base = snap.sosAlerts.filter((s) =>
+      tab === 'active' ? s.status === 'active' : s.status === 'resolved',
+    );
+    if (!q.trim()) return base;
+    return base.filter((s) => {
+      const c = ops.getClient(s.clientId);
+      return `${c?.fullName} ${c?.znCode}`.toLowerCase().includes(q.toLowerCase());
+    });
+  }, [snap.sosAlerts, tab, q]);
 
-  async function handleResolve(id: string) {
-    setResolvingId(id);
-    try {
-      await sosApi.resolve(id);
-      push({ tone: 'success', title: t('sos.resolved') });
-      queryClient.invalidateQueries({ queryKey: ['sos'] });
-    } catch (error) {
-      push({
-        tone: 'error',
-        title: t('somethingWrong'),
-        description: error instanceof ApiClientError ? error.message : undefined,
-      });
-    } finally {
-      setResolvingId(null);
-    }
+  const fileClient = fileId
+    ? ops.getClient(snap.sosAlerts.find((s) => s.id === fileId)?.clientId ?? '')
+    : null;
+  const fileDriver = fileClient?.driverId ? ops.getDriver(fileClient.driverId) : null;
+
+  async function submitResolve() {
+    if (!resolveId) return;
+    await ops.resolveSos(resolveId, {
+      phoneAttempt: phoneAttempt === 'yes',
+      driverDispatchedId: driverId || null,
+      emergencyService: emergency || null,
+      notes,
+    });
+    push({ tone: 'success', title: 'SOS resolved — protocol logged' });
+    setResolveId(null);
+    setNotes('');
+    setDriverId('');
+    setEmergency('');
   }
+
+  const activeCount = snap.sosAlerts.filter((s) => s.status === 'active').length;
 
   return (
     <PageScaffold
-      title={t('sos.title')}
-      description={t('sos.description')}
-      stats={
-        sosQuery.data ? (
-          <StatsCard
-            label={t('bookings.total')}
-            value={sosQuery.data.meta.total}
-            tone={status === 'active' ? 'danger' : 'default'}
-          />
-        ) : undefined
-      }
+      title="SOS Alerts"
+      description="Critical emergency monitoring. Active alerts outrank all other ops work."
       filters={
-        <Select
-          className="max-w-xs"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="active">{t('common.active')}</option>
-          <option value="resolved">{t('common.resolved')}</option>
-          <option value="">{t('all')}</option>
-        </Select>
+        <>
+          <TabBar
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { id: 'active', label: 'Active', count: activeCount },
+              { id: 'history', label: 'History' },
+            ]}
+          />
+          <SearchBar value={q} onChange={setQ} placeholder="Search client / ZN…" className="max-w-xs" />
+        </>
       }
     >
-      {sosQuery.isLoading ? (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20" />
-          ))}
-        </div>
-      ) : sosQuery.isError ? (
-        <ErrorState description={t('sos.loadFailed')} onRetry={() => sosQuery.refetch()} />
-      ) : !sosQuery.data?.data.length ? (
-        <EmptyState title={t('sos.empty')} description={t('sos.calm')} />
-      ) : (
-        <>
-          <div className="flex flex-col gap-3">
-            {sosQuery.data.data.map((alert) => (
-              <Card key={alert.id}>
-                <div className="flex items-start justify-between gap-3">
+      <div className="space-y-3">
+        {list.length === 0 ? (
+          <p className="py-16 text-center text-sm text-[var(--ink-muted)]">
+            {tab === 'active' ? 'All clear — no active emergencies' : 'No historical SOS events'}
+          </p>
+        ) : (
+          list.map((s) => {
+            const c = ops.getClient(s.clientId);
+            return (
+              <div
+                key={s.id}
+                className={
+                  s.status === 'active'
+                    ? 'rounded-[var(--radius)] border border-[var(--danger)]/40 bg-[color-mix(in_srgb,var(--danger)_6%,transparent)] p-4 shadow-[var(--shadow)]'
+                    : 'rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]'
+                }
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">{alert.bookingId}</p>
-                      <StatusBadge tone={alert.status === 'active' ? 'danger' : 'success'}>
-                        {alert.status}
-                      </StatusBadge>
-                    </div>
-                    {alert.message ? (
-                      <p className="mt-1 text-sm text-[var(--ink-muted)]">{alert.message}</p>
-                    ) : null}
-                    {alert.lat != null && alert.lng != null ? (
-                      <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                        {alert.lat.toFixed(4)}, {alert.lng.toFixed(4)}
-                      </p>
-                    ) : null}
-                    <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                      {formatDate(alert.createdAt)}
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--danger)]">
+                      {s.status === 'active' ? 'Emergency alert' : 'Resolved event'}
                     </p>
+                    <p className="mt-1 text-base font-semibold">
+                      {c?.fullName} · {c?.znCode}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                      Triggered {ops.elapsedLabel(s.triggeredAt)}
+                      {s.responseMinutes != null ? ` · Response ${s.responseMinutes}m` : ''}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-[var(--ink-muted)]">
+                      {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
+                    </p>
+                    {c?.phone ? (
+                      <a href={`tel:${c.phone}`} className="mt-2 inline-flex items-center gap-1 text-sm text-[var(--accent)]">
+                        <Phone className="h-3.5 w-3.5" /> {c.phone}
+                      </a>
+                    ) : null}
                   </div>
-                  {alert.status === 'active' ? (
-                    <Button
-                      variant="danger"
-                      disabled={resolvingId === alert.id}
-                      onClick={() => handleResolve(alert.id)}
-                    >
-                      {t('sos.resolve')}
-                    </Button>
-                  ) : null}
+                  <StatusBadge tone={s.status === 'active' ? 'danger' : 'success'}>
+                    {s.status.toUpperCase()}
+                  </StatusBadge>
                 </div>
-              </Card>
-            ))}
+                {s.notes ? (
+                  <p className="mt-2 text-sm text-[var(--ink-muted)]">{s.notes}</p>
+                ) : null}
+                {s.status === 'active' ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" onClick={() => setFileId(s.id)}>
+                      <FolderOpen className="h-4 w-4" /> View File
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => push({ tone: 'success', title: 'Priority DM thread opened (demo)' })}
+                    >
+                      <MessageSquare className="h-4 w-4" /> In-App Chat
+                    </Button>
+                    <Button type="button" onClick={() => setResolveId(s.id)}>
+                      <CheckCircle2 className="h-4 w-4" /> Resolve Alert
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <DetailDrawer
+        open={Boolean(fileClient)}
+        title={`Client file · ${fileClient?.znCode ?? ''}`}
+        onClose={() => setFileId(null)}
+        wide
+      >
+        {fileClient ? (
+          <div className="space-y-4 text-sm">
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Profile</h3>
+              <p className="mt-1 font-medium">{fileClient.fullName}</p>
+              <p className="text-[var(--ink-muted)]">{fileClient.phone} · {fileClient.email}</p>
+              <p className="mt-1">Language: {fileClient.language.toUpperCase()}</p>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Medical</h3>
+              <p className="mt-1">{fileClient.medicalNotes || 'None'}</p>
+              <p className="mt-1">Dietary: {fileClient.dietary || '—'}</p>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Emergency contact</h3>
+              <p className="mt-1">{fileClient.emergencyContact || '—'}</p>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Passport / ID</h3>
+              <p className="mt-1 font-mono">{fileClient.passportMasked}</p>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Hotel</h3>
+              <p className="mt-1">{fileClient.hotel}</p>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Assigned driver</h3>
+              <p className="mt-1">{fileDriver ? `${fileDriver.name} · ${fileDriver.phone}` : 'Unassigned'}</p>
+            </section>
           </div>
-          <div className="mt-4">
-            <Pagination
-              page={sosQuery.data.meta.page}
-              limit={sosQuery.data.meta.limit}
-              total={sosQuery.data.meta.total}
-              onPageChange={setPage}
-            />
+        ) : null}
+      </DetailDrawer>
+
+      <DialogShell
+        open={Boolean(resolveId)}
+        title="Emergency protocol checklist"
+        onClose={() => setResolveId(null)}
+        wide
+      >
+        <div className="space-y-4">
+          <div>
+            <Label>Direct phone attempt recorded</Label>
+            <Select value={phoneAttempt} onChange={(e) => setPhoneAttempt(e.target.value)}>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </Select>
           </div>
-        </>
-      )}
+          <div>
+            <Label>Nearby driver dispatched</Label>
+            <Select value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+              <option value="">— Select driver —</option>
+              {snap.drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({d.status})
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Emergency service notified</Label>
+            <Select value={emergency} onChange={(e) => setEmergency(e.target.value)}>
+              <option value="">None / N/A</option>
+              <option value="Ambulance 103">Ambulance 103</option>
+              <option value="Emergency 112">Emergency 112</option>
+            </Select>
+          </div>
+          <div>
+            <Label>Resolution notes</Label>
+            <Textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} required />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setResolveId(null)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void submitResolve()} disabled={!notes.trim()}>
+              Close alert
+            </Button>
+          </div>
+        </div>
+      </DialogShell>
     </PageScaffold>
   );
 }

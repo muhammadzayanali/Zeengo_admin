@@ -1,115 +1,123 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { financeApi } from '../services/finance.api';
-import { Card, ErrorState, PageScaffold, Select, Skeleton, StatsCard } from '@/shared/ui';
-import { formatMoney } from '@/shared/lib/cn';
+import { useMemo, useState } from 'react';
+import { useOpsSnapshot } from '@/ops-demo/useOpsStore';
+import {
+  Button,
+  DetailDrawer,
+  PageScaffold,
+  SearchBar,
+  StatsCard,
+  StatusBadge,
+  useToast,
+} from '@/shared/ui';
+
+type Tx = { id: string; client: string; amount: number; status: 'paid' | 'pending' | 'failed'; method: string; at: string };
+
+const TX: Tx[] = [
+  { id: 'tx1', client: 'ZN0001 Abdullah', amount: 12500, status: 'paid', method: 'Stripe', at: '2026-08-04' },
+  { id: 'tx2', client: 'ZN0002 فهد', amount: 1750, status: 'pending', method: 'Stripe link', at: '2026-08-04' },
+  { id: 'tx3', client: 'ZN0003 Noura', amount: 4200, status: 'paid', method: 'Cash', at: '2026-08-03' },
+  { id: 'tx4', client: 'ZN0005 Maria', amount: 200, status: 'failed', method: 'Stripe', at: '2026-08-03' },
+  { id: 'tx5', client: 'ZN0010 Turki', amount: 8000, status: 'paid', method: 'Stripe', at: '2026-08-02' },
+];
 
 export function FinancePage() {
-  const { t } = useTranslation();
-  const [days, setDays] = useState(30);
+  const snap = useOpsSnapshot();
+  const { push } = useToast();
+  const [q, setQ] = useState('');
+  const [txId, setTxId] = useState<string | null>(null);
 
-  const summaryQuery = useQuery({
-    queryKey: ['finance', 'summary'],
-    queryFn: ({ signal }) => financeApi.summary(signal),
-    refetchInterval: 60_000,
-  });
+  const outstanding = snap.clients.reduce((s, c) => s + c.outstanding, 0);
+  const gross = snap.clients.reduce((s, c) => s + c.totalSpent, 0);
+  const vendorPending = 3200;
+  const net = gross * 0.62;
 
-  const revenueQuery = useQuery({
-    queryKey: ['finance', 'revenue-by-method', days],
-    queryFn: ({ signal }) => financeApi.revenueByMethod(days, signal),
-  });
-
-  const maxAmount = Math.max(1, ...(revenueQuery.data?.byMethod.map((m) => m.amount) ?? [0]));
+  const filtered = useMemo(
+    () => TX.filter((t) => `${t.client} ${t.method}`.toLowerCase().includes(q.toLowerCase())),
+    [q],
+  );
+  const detail = TX.find((t) => t.id === txId);
 
   return (
     <PageScaffold
-      title={t('finance.title')}
-      description={t('finance.description')}
+      title="Finance"
+      description="Global ledger — gross revenue, pending collections, vendor payouts, Stripe tools (UI demo)."
       stats={
-        summaryQuery.isLoading ? (
-          <>
-            <Skeleton className="h-[92px] w-full rounded-[var(--radius)]" />
-            <Skeleton className="h-[92px] w-full rounded-[var(--radius)]" />
-            <Skeleton className="h-[92px] w-full rounded-[var(--radius)]" />
-          </>
-        ) : summaryQuery.data ? (
-          <>
-            <StatsCard
-              label={t('finance.stripeToday')}
-              value={formatMoney(summaryQuery.data.today.stripe.amount)}
-              hint={t('finance.paymentsCount', { count: summaryQuery.data.today.stripe.count })}
-              tone="accent"
-            />
-            <StatsCard
-              label={t('finance.cashToday')}
-              value={formatMoney(summaryQuery.data.today.cash.amount)}
-              hint={t('finance.paymentsCount', { count: summaryQuery.data.today.cash.count })}
-              tone="success"
-            />
-            <StatsCard
-              label={t('finance.pending')}
-              value={formatMoney(summaryQuery.data.pending.amount)}
-              hint={t('finance.paymentsCount', { count: summaryQuery.data.pending.count })}
-              tone="warning"
-            />
-          </>
-        ) : undefined
+        <>
+          <StatsCard label="Gross revenue" value={`$${gross.toLocaleString()}`} tone="success" />
+          <StatsCard label="Net profit (est.)" value={`$${Math.round(net).toLocaleString()}`} />
+          <StatsCard label="Vendor payouts pending" value={`$${vendorPending.toLocaleString()}`} tone="warning" />
+          <StatsCard label="Outstanding receivables" value={`-$${outstanding.toLocaleString()}`} tone="danger" />
+        </>
       }
-      filters={
-        <Select
-          className="max-w-[160px]"
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-        >
-          <option value={7}>{t('finance.last7')}</option>
-          <option value={30}>{t('finance.last30')}</option>
-          <option value={90}>{t('finance.last90')}</option>
-        </Select>
+      filters={<SearchBar value={q} onChange={setQ} placeholder="Transaction / client…" className="max-w-sm" />}
+      primaryAction={
+        <Button type="button" variant="secondary" onClick={() => push({ tone: 'success', title: 'Stripe dashboard (demo link)' })}>
+          Open Stripe
+        </Button>
       }
     >
-      {summaryQuery.isError ? (
-        <ErrorState
-          description={t('finance.loadFailed')}
-          onRetry={() => summaryQuery.refetch()}
-        />
-      ) : null}
+      <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] text-sm">
+            <thead className="bg-[var(--bg-muted)] text-xs font-medium uppercase text-[var(--ink-muted)]">
+              <tr>
+                <th className="px-4 py-3 text-start">Client</th>
+                <th className="px-4 py-3 text-start">Method</th>
+                <th className="px-4 py-3 text-start">Amount</th>
+                <th className="px-4 py-3 text-start">Status</th>
+                <th className="px-4 py-3 text-start">Date</th>
+                <th className="px-4 py-3 text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((t) => (
+                <tr key={t.id} className="border-t border-[var(--line)] hover:bg-[var(--bg-muted)]/70">
+                  <td className="px-4 py-3 font-medium">{t.client}</td>
+                  <td className="px-4 py-3">{t.method}</td>
+                  <td className="px-4 py-3">${t.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge tone={t.status === 'paid' ? 'success' : t.status === 'pending' ? 'warning' : 'danger'}>
+                      {t.status}
+                    </StatusBadge>
+                  </td>
+                  <td className="px-4 py-3 text-[var(--ink-muted)]">{t.at}</td>
+                  <td className="px-4 py-3 text-end">
+                    <Button type="button" variant="ghost" onClick={() => setTxId(t.id)}>
+                      Details
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      <Card>
-        <h2 className="mb-4 text-lg font-bold">{t('finance.revenueByMethod')}</h2>
-        {revenueQuery.isLoading ? (
-          <Skeleton className="h-32" />
-        ) : revenueQuery.isError || !revenueQuery.data ? (
-          <ErrorState
-            description={t('finance.revenueFailed')}
-            onRetry={() => revenueQuery.refetch()}
-          />
-        ) : !revenueQuery.data.byMethod.length ? (
-          <p className="text-sm text-[var(--ink-muted)]">{t('finance.noRevenue')}</p>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {revenueQuery.data.byMethod.map((row) => (
-              <div key={row.method}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="font-semibold capitalize">{row.method.replace('_', ' ')}</span>
-                  <span className="text-[var(--ink-muted)]">
-                    {formatMoney(row.amount)} · {t('finance.paymentsCount', { count: row.count })}
-                  </span>
-                </div>
-                <div className="h-3 w-full rounded-full bg-[var(--bg-muted)]">
-                  <div
-                    className="h-3 rounded-full bg-[var(--accent)]"
-                    style={{ width: `${Math.max(4, (row.amount / maxAmount) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-            <p className="text-right text-sm font-semibold">
-              {t('finance.total', { amount: formatMoney(revenueQuery.data.total) })}
-            </p>
-          </div>
-        )}
-      </Card>
+      <DetailDrawer open={Boolean(detail)} title="Transaction" onClose={() => setTxId(null)}
+        footer={
+          detail ? (
+            <div className="flex flex-col gap-2">
+              <Button type="button" variant="secondary" onClick={() => push({ tone: 'success', title: 'Receipt generated (demo)' })}>
+                Generate receipt
+              </Button>
+              {detail.status === 'paid' ? (
+                <Button type="button" variant="danger" onClick={() => push({ tone: 'success', title: 'Refund queued (demo)' })}>
+                  Process refund
+                </Button>
+              ) : null}
+            </div>
+          ) : null
+        }
+      >
+        {detail ? (
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Client</dt><dd>{detail.client}</dd></div>
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Amount</dt><dd>${detail.amount.toLocaleString()}</dd></div>
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Method</dt><dd>{detail.method}</dd></div>
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Status</dt><dd>{detail.status}</dd></div>
+          </dl>
+        ) : null}
+      </DetailDrawer>
     </PageScaffold>
   );
 }

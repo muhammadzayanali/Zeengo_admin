@@ -1,459 +1,344 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import {
   Users,
   Car,
   Wallet,
   ListTodo,
   Siren,
-  CalendarRange,
-  Plus,
+  Percent,
+  Phone,
   FileText,
   UserPlus,
+  AlertTriangle,
 } from 'lucide-react';
-import { dashboardApi } from '../services/dashboard.api';
-import { driversApi } from '@/features/drivers/services/drivers.api';
-import { financeApi } from '@/features/finance/services/finance.api';
-import { notificationsApi } from '@/features/notifications/services/notifications.api';
-import { sosApi } from '@/features/sos/services/sos.api';
+import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
 import {
   AnalyticsCard,
   Button,
+  DetailDrawer,
+  DialogShell,
   DriverCard,
-  ErrorState,
-  NotificationPanel,
   PageScaffold,
-  Skeleton,
   StatsCard,
   StatusBadge,
-  Timeline,
+  Textarea,
   useToast,
   type StatusTone,
 } from '@/shared/ui';
-import { ApiClientError } from '@/shared/api/client';
-import { formatMoney } from '@/shared/lib/cn';
 
-function driverTone(status: string): StatusTone {
-  const s = status.toLowerCase();
-  if (s.includes('available') || s === 'online') return 'success';
-  if (s.includes('route') || s.includes('busy') || s.includes('assigned')) return 'accent';
-  if (s.includes('rest') || s.includes('break')) return 'warning';
+function dTone(s: string): StatusTone {
+  if (s === 'AVAILABLE') return 'success';
+  if (s === 'EN_ROUTE') return 'accent';
+  if (s === 'RESTING') return 'warning';
   return 'default';
 }
 
 export function DashboardPage() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { push } = useToast();
-  const [scheduleDate, setScheduleDate] = useState<'today' | 'tomorrow'>('today');
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
-  const [creatingEod, setCreatingEod] = useState(false);
+  const snap = useOpsSnapshot();
+  const k = snap.kpis;
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignClientId, setAssignClientId] = useState<string | null>(null);
+  const [eodOpen, setEodOpen] = useState(false);
+  const [eodText, setEodText] = useState('');
+  const [driverId, setDriverId] = useState<string | null>(null);
 
-  const summaryQuery = useQuery({
-    queryKey: ['dashboard', 'summary'],
-    queryFn: ({ signal }) => dashboardApi.summary(signal),
-    refetchInterval: 60_000,
-  });
-
-  const alertsQuery = useQuery({
-    queryKey: ['dashboard', 'urgent-alerts'],
-    queryFn: ({ signal }) => dashboardApi.urgentAlerts(signal),
-    refetchInterval: 60_000,
-  });
-
-  const scheduleQuery = useQuery({
-    queryKey: ['dashboard', 'schedule', scheduleDate],
-    queryFn: ({ signal }) => dashboardApi.schedule(scheduleDate, signal),
-  });
-
-  const driversQuery = useQuery({
-    queryKey: ['drivers', 'board'],
-    queryFn: ({ signal }) => driversApi.list({ page: 1, limit: 24 }, signal),
-    refetchInterval: 60_000,
-  });
-
-  const financeQuery = useQuery({
-    queryKey: ['finance', 'revenue-by-method'],
-    queryFn: ({ signal }) => financeApi.revenueByMethod(14, signal),
-  });
-
-  const notificationsQuery = useQuery({
-    queryKey: ['notifications', 'dashboard'],
-    queryFn: ({ signal }) => notificationsApi.list({ page: 1, limit: 6 }, signal),
-    refetchInterval: 60_000,
-  });
-
-  const sosQuery = useQuery({
-    queryKey: ['sos', 'dashboard-count'],
-    queryFn: ({ signal }) => sosApi.list({ page: 1, limit: 1, status: 'active' }, signal),
-    refetchInterval: 30_000,
-  });
-
-  const summary = summaryQuery.data;
-  const sosCount = sosQuery.data?.meta.total ?? 0;
-
-  const timelineItems = useMemo(
-    () =>
-      (scheduleQuery.data ?? []).slice(0, 12).map((item) => ({
-        id: item.id,
-        time: item.startTime ?? undefined,
-        title: item.title || item.clientName,
-        description: `${item.znCode} · ${item.clientName}${item.locationName ? ` · ${item.locationName}` : ''}`,
-        tone:
-          item.status === 'done'
-            ? ('success' as const)
-            : item.status === 'pending'
-              ? ('warning' as const)
-              : ('accent' as const),
-      })),
-    [scheduleQuery.data],
+  const unassigned = useMemo(
+    () => snap.clients.filter((c) => c.status === 'active' && !c.driverId),
+    [snap.clients],
   );
+  const activeSos = snap.sosAlerts.filter((s) => s.status === 'active');
+  const pendingEdits = snap.editRequests.filter((e) => e.status === 'pending');
+  const selectedDriver = driverId ? ops.getDriver(driverId) : null;
 
-  const revenueBars = useMemo(() => {
-    const list = financeQuery.data?.byMethod ?? [];
-    const amounts = list.map((m) => ({
-      label: m.method,
-      amount: Number(m.amount ?? 0),
-    }));
-    const max = Math.max(...amounts.map((a) => a.amount), 1);
-    return amounts.slice(0, 6).map((a) => ({ ...a, pct: Math.round((a.amount / max) * 100) }));
-  }, [financeQuery.data]);
-
-  async function handleCreateEod() {
-    setCreatingEod(true);
+  async function doAssign(driverId: string) {
+    if (!assignClientId) return;
     try {
-      await dashboardApi.createEod();
-      push({ tone: 'success', title: t('dashboard.eodSuccess') });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    } catch (error) {
-      push({
-        tone: 'error',
-        title: t('dashboard.eodFailed'),
-        description: error instanceof ApiClientError ? error.message : undefined,
-      });
-    } finally {
-      setCreatingEod(false);
+      await ops.assignDriverToClient(assignClientId, driverId);
+      push({ tone: 'success', title: 'Driver assigned' });
+      setAssignOpen(false);
+      setAssignClientId(null);
+    } catch {
+      push({ tone: 'error', title: 'Assign failed' });
     }
   }
 
-  if (summaryQuery.isError) {
-    return (
-      <ErrorState
-        title={t('dashboard.loadFailed')}
-        onRetry={() => summaryQuery.refetch()}
-      />
-    );
+  function openEod() {
+    setEodText(ops.generateEodText());
+    setEodOpen(true);
   }
-
-  const contextOpen = Boolean(selectedDriverId || selectedTimelineId);
-  const selectedDriver = driversQuery.data?.data.find((d) => d.id === selectedDriverId);
 
   return (
     <PageScaffold
-      title={t('dashboard.title')}
-      description={t('dashboard.description')}
+      title="Operations Dashboard"
+      description="Central pulse — live clients, field drivers, SOS, and today’s fulfillment."
       primaryAction={
         <>
           <Button type="button" variant="secondary" onClick={() => navigate('/sos')}>
             <Siren className="h-4 w-4" />
             SOS
-            {sosCount > 0 ? (
-              <StatusBadge tone="danger">{sosCount}</StatusBadge>
-            ) : null}
+            {k.activeSos > 0 ? <StatusBadge tone="danger">{k.activeSos}</StatusBadge> : null}
           </Button>
-          <Button type="button" loading={creatingEod} onClick={() => void handleCreateEod()}>
+          <Button type="button" onClick={openEod}>
             <FileText className="h-4 w-4" />
-            {t('dashboard.generateEod')}
+            Generate EOD
           </Button>
         </>
       }
-      className={contextOpen ? 'xl:pe-[300px]' : undefined}
     >
-      {/* KPI row */}
+      {k.overdue > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-[var(--danger)]/30 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-[var(--danger)]">
+            <AlertTriangle className="h-4 w-4" />
+            Ops queue: {k.overdue} overdue task{k.overdue === 1 ? '' : 's'} need attention
+          </div>
+          <Button type="button" variant="secondary" onClick={() => navigate('/daily-ops')}>
+            Open daily ops
+          </Button>
+        </div>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {summaryQuery.isLoading || !summary ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-[92px] w-full rounded-[var(--radius)]" />
-          ))
-        ) : (
-          <>
-            <StatsCard
-              label={t('dashboard.activeClients')}
-              value={summary.activeClients}
-              icon={<Users className="h-4 w-4" />}
-              onClick={() => navigate('/clients')}
-            />
-            <StatsCard
-              label={t('dashboard.driversInField')}
-              value={summary.driversInField}
-              tone="accent"
-              icon={<Car className="h-4 w-4" />}
-              onClick={() => navigate('/drivers')}
-            />
-            <StatsCard
-              label={t('dashboard.revenueToday')}
-              value={formatMoney(summary.revenueToday)}
-              tone="success"
-              icon={<Wallet className="h-4 w-4" />}
-              onClick={() => navigate('/finance')}
-            />
-            <StatsCard
-              label={t('dashboard.urgentTasks')}
-              value={summary.urgentTasks}
-              tone={summary.urgentTasks > 0 ? 'warning' : 'default'}
-              icon={<ListTodo className="h-4 w-4" />}
-              onClick={() => navigate('/tasks')}
-            />
-            <StatsCard
-              label={t('nav.sos')}
-              value={sosCount}
-              tone={sosCount > 0 ? 'danger' : 'default'}
-              hint={sosCount > 0 ? 'Requires immediate attention' : 'All clear'}
-              icon={<Siren className="h-4 w-4" />}
-              onClick={() => navigate('/sos')}
-            />
-            <StatsCard
-              label={t('dashboard.todaysItinerary')}
-              value={summary.todaysItinerary}
-              icon={<CalendarRange className="h-4 w-4" />}
-              onClick={() => navigate('/daily-ops')}
-            />
-          </>
-        )}
+        <StatsCard label="Active clients" value={k.activeClients} icon={<Users className="h-4 w-4" />} onClick={() => navigate('/clients')} />
+        <StatsCard label="Urgent tasks" value={k.urgentTasks} tone={k.urgentTasks ? 'warning' : 'default'} icon={<ListTodo className="h-4 w-4" />} onClick={() => navigate('/daily-ops')} />
+        <StatsCard label="Drivers in field" value={k.driversInField} tone="accent" icon={<Car className="h-4 w-4" />} onClick={() => navigate('/drivers')} />
+        <StatsCard label="Revenue today" value={`$${k.revenueToday}`} tone="success" icon={<Wallet className="h-4 w-4" />} onClick={() => navigate('/finance')} />
+        <StatsCard label="Itinerary progress" value={`${k.itineraryProgress}%`} icon={<Percent className="h-4 w-4" />} onClick={() => navigate('/daily-ops')} />
+        <StatsCard
+          label="Unassigned clients"
+          value={k.unassigned}
+          tone={k.unassigned ? 'danger' : 'default'}
+          hint={k.unassigned ? 'Assign now →' : 'All matched'}
+          onClick={() => {
+            if (unassigned[0]) {
+              setAssignClientId(unassigned[0].id);
+              setAssignOpen(true);
+            }
+          }}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
-        {/* Today's Timeline */}
         <AnalyticsCard
           className="xl:col-span-3"
-          title="Today's timeline"
-          description="Live itinerary pulse for the selected day"
-          action={
-            <div className="flex gap-1 rounded-lg bg-[var(--bg-muted)] p-0.5">
-              {(['today', 'tomorrow'] as const).map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setScheduleDate(d)}
-                  className={
-                    scheduleDate === d
-                      ? 'rounded-md bg-[var(--bg-elevated)] px-2.5 py-1 text-xs font-medium text-[var(--ink)] shadow-sm'
-                      : 'px-2.5 py-1 text-xs font-medium text-[var(--ink-muted)]'
-                  }
-                >
-                  {d === 'today' ? t('today') : t('tomorrow')}
-                </button>
-              ))}
-            </div>
-          }
+          title="Urgent alerts"
+          description="SOS signals and edit requests first"
+          action={<Link to="/sos" className="text-xs font-medium text-[var(--accent)]">SOS desk</Link>}
         >
-          {scheduleQuery.isLoading ? (
-            <Skeleton className="h-48 w-full" />
-          ) : (
-            <Timeline
-              items={timelineItems}
-              empty={t('common.noData')}
-              onSelect={(id) => setSelectedTimelineId(id)}
-            />
-          )}
+          <div className="space-y-3">
+            {activeSos.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[var(--ink-muted)]">No active SOS</p>
+            ) : (
+              activeSos.map((s) => {
+                const c = ops.getClient(s.clientId);
+                return (
+                  <div
+                    key={s.id}
+                    className="rounded-[16px] border border-[var(--danger)]/40 bg-[color-mix(in_srgb,var(--danger)_6%,transparent)] p-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--danger)]">EMERGENCY ALERT</p>
+                        <p className="mt-1 text-sm font-medium">{c?.fullName} · {c?.znCode}</p>
+                        <p className="text-xs text-[var(--ink-muted)]">{ops.elapsedLabel(s.triggeredAt)}</p>
+                      </div>
+                      <StatusBadge tone="danger">ACTIVE</StatusBadge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="button" variant="secondary" onClick={() => navigate('/sos')}>
+                        Open protocol
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            <div className="border-t border-[var(--line)] pt-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                Edit requests
+              </p>
+              {pendingEdits.length === 0 ? (
+                <p className="text-sm text-[var(--ink-muted)]">No pending edits</p>
+              ) : (
+                pendingEdits.map((er) => {
+                  const c = ops.getClient(er.clientId);
+                  return (
+                    <button
+                      key={er.id}
+                      type="button"
+                      className="mb-2 flex w-full items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-start hover:bg-[var(--bg-muted)]"
+                      onClick={() => navigate('/edit-requests')}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">
+                          {c?.fullName} ({c?.znCode})
+                        </span>
+                        <span className="block text-xs text-[var(--ink-muted)]">
+                          {er.type}: {er.requested}
+                        </span>
+                      </span>
+                      <StatusBadge tone="warning">{er.status}</StatusBadge>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </AnalyticsCard>
 
-        {/* Driver Status Board */}
         <AnalyticsCard
           className="xl:col-span-2"
-          title="Driver status board"
-          description="Availability across the fleet"
-          action={
-            <Link to="/drivers" className="text-xs font-medium text-[var(--accent)]">
-              View all
-            </Link>
-          }
+          title="Driver board"
+          description="Live operational status"
+          action={<Link to="/drivers" className="text-xs font-medium text-[var(--accent)]">Roster</Link>}
         >
-          <div className="max-h-72 space-y-2 overflow-y-auto">
-            {driversQuery.isLoading ? (
-              <Skeleton className="h-48 w-full" />
-            ) : (driversQuery.data?.data.length ?? 0) === 0 ? (
-              <p className="py-8 text-center text-sm text-[var(--ink-muted)]">{t('common.noData')}</p>
-            ) : (
-              driversQuery.data!.data.map((d) => (
+          <div className="space-y-2">
+            {snap.drivers.map((d) => (
+              <div key={d.id} className="space-y-1">
                 <DriverCard
-                  key={d.id}
-                  name={d.user.fullName}
-                  vehicle={[d.vehicleMake, d.vehicleModel, d.plateNumber].filter(Boolean).join(' · ')}
-                  status={d.status}
-                  statusTone={driverTone(d.status)}
-                  selected={selectedDriverId === d.id}
-                  onClick={() => setSelectedDriverId(d.id)}
+                  name={d.name}
+                  vehicle={`${d.vehicle} · ${d.plate}`}
+                  status={d.status.replace('_', ' ')}
+                  statusTone={dTone(d.status)}
+                  onClick={() => setDriverId(d.id)}
                 />
-              ))
-            )}
-          </div>
-        </AnalyticsCard>
-      </div>
-
-      {/* Revenue + Activity */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <AnalyticsCard
-          title="Revenue analytics"
-          description="Mix by payment method (last 14 days)"
-          action={
-            <Link to="/finance" className="text-xs font-medium text-[var(--accent)]">
-              Finance
-            </Link>
-          }
-        >
-          {financeQuery.isLoading ? (
-            <Skeleton className="h-40 w-full" />
-          ) : revenueBars.length === 0 ? (
-            <p className="py-10 text-center text-sm text-[var(--ink-muted)]">{t('common.noData')}</p>
-          ) : (
-            <div className="space-y-3">
-              {revenueBars.map((bar) => (
-                <div key={bar.label}>
-                  <div className="mb-1 flex justify-between text-xs">
-                    <span className="font-medium text-[var(--ink)]">{bar.label}</span>
-                    <span className="text-[var(--ink-muted)]">{formatMoney(bar.amount)}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-[var(--bg-muted)]">
-                    <div
-                      className="h-full rounded-full bg-[var(--accent)]"
-                      style={{ width: `${bar.pct}%` }}
-                    />
-                  </div>
+                <div className="flex items-center justify-between px-1 text-[11px] text-[var(--ink-muted)]">
+                  <a href={`tel:${d.phone}`} className="inline-flex items-center gap-1 hover:text-[var(--accent)]">
+                    <Phone className="h-3 w-3" />
+                    {d.phone}
+                  </a>
+                  <span>{d.assignmentId ?? 'No assignment'}</span>
                 </div>
+              </div>
+            ))}
+          </div>
+        </AnalyticsCard>
+      </div>
+
+      <AnalyticsCard
+        title="Unassigned clients"
+        description={`${k.unassigned} active without a primary driver`}
+        action={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              if (unassigned[0]) {
+                setAssignClientId(unassigned[0].id);
+                setAssignOpen(true);
+              }
+            }}
+          >
+            <UserPlus className="h-4 w-4" />
+            Assign now →
+          </Button>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-sm">
+            <thead className="text-xs font-medium uppercase text-[var(--ink-muted)]">
+              <tr>
+                <th className="px-2 py-2 text-start">Code</th>
+                <th className="px-2 py-2 text-start">Client</th>
+                <th className="px-2 py-2 text-start">Package</th>
+                <th className="px-2 py-2 text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unassigned.map((c) => (
+                <tr key={c.id} className="border-t border-[var(--line)]">
+                  <td className="px-2 py-2 font-medium">{c.znCode}</td>
+                  <td className="px-2 py-2">{c.fullName}</td>
+                  <td className="px-2 py-2 text-[var(--ink-muted)]">{c.packageName}</td>
+                  <td className="px-2 py-2 text-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setAssignClientId(c.id);
+                        setAssignOpen(true);
+                      }}
+                    >
+                      Assign
+                    </Button>
+                  </td>
+                </tr>
               ))}
-            </div>
-          )}
-        </AnalyticsCard>
-
-        <AnalyticsCard
-          title={t('dashboard.urgentAlerts')}
-          description="Recent operational signals"
-          action={
-            <Link to="/edit-requests" className="text-xs font-medium text-[var(--accent)]">
-              Edit requests
-            </Link>
-          }
-        >
-          {alertsQuery.isLoading ? (
-            <Skeleton className="h-40 w-full" />
-          ) : (alertsQuery.data?.length ?? 0) === 0 ? (
-            <p className="py-10 text-center text-sm text-[var(--ink-muted)]">{t('dashboard.noAlerts')}</p>
-          ) : (
-            <Timeline
-              items={(alertsQuery.data ?? []).map((a, idx) => ({
-                id: `${a.type}-${a.entityId ?? idx}`,
-                time: a.createdAt ? new Date(a.createdAt).toLocaleTimeString() : undefined,
-                title: a.title,
-                description: a.message,
-                tone:
-                  a.severity === 'high'
-                    ? 'danger'
-                    : a.severity === 'medium'
-                      ? 'warning'
-                      : 'default',
-              }))}
-            />
-          )}
-        </AnalyticsCard>
-      </div>
-
-      {/* Notifications + Quick actions */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[var(--ink)]">{t('nav.notifications')}</h3>
-            <Link to="/notifications" className="text-xs font-medium text-[var(--accent)]">
-              Open inbox
-            </Link>
-          </div>
-          <NotificationPanel
-            items={(notificationsQuery.data?.data ?? []).map((n) => ({
-              id: n.id,
-              title: n.title,
-              body: n.body ?? undefined,
-              time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString() : undefined,
-              unread: !n.isRead,
-            }))}
-            empty={t('common.noData')}
-          />
+            </tbody>
+          </table>
         </div>
+      </AnalyticsCard>
 
-        <AnalyticsCard title="Quick actions" description="High-frequency dispatch moves">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button type="button" variant="secondary" onClick={() => navigate('/drivers')}>
-              <UserPlus className="h-4 w-4" />
-              Assign driver
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate('/sos')}>
-              <Siren className="h-4 w-4" />
-              Open SOS
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate('/bookings')}>
-              <Plus className="h-4 w-4" />
-              New booking
-            </Button>
-            <Button type="button" variant="secondary" loading={creatingEod} onClick={() => void handleCreateEod()}>
-              <FileText className="h-4 w-4" />
-              End of day
-            </Button>
-          </div>
-          {summary ? (
-            <p className="mt-4 text-xs text-[var(--ink-muted)]">
-              Unassigned clients: <strong className="text-[var(--ink)]">{summary.unassignedClients}</strong>
-              {' · '}
-              Ops queue: <strong className="text-[var(--ink)]">{summary.opsQueue}</strong>
-            </p>
-          ) : null}
-        </AnalyticsCard>
-      </div>
-
-      {/* Right context panel */}
-      {contextOpen ? (
-        <aside className="fixed inset-y-16 end-0 z-20 hidden w-[280px] overflow-y-auto border-s border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)] xl:block">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Context</h3>
-            <button
-              type="button"
-              className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--ink)]"
-              onClick={() => {
-                setSelectedDriverId(null);
-                setSelectedTimelineId(null);
-              }}
-            >
-              Close
-            </button>
-          </div>
-          {selectedDriver ? (
-            <div className="space-y-3">
-              <DriverCard
-                name={selectedDriver.user.fullName}
-                vehicle={[selectedDriver.vehicleMake, selectedDriver.plateNumber]
-                  .filter(Boolean)
-                  .join(' · ')}
-                status={selectedDriver.status}
-                statusTone={driverTone(selectedDriver.status)}
-              />
-              <Button
+      <DialogShell open={assignOpen} title="Assign driver" onClose={() => setAssignOpen(false)}>
+        <p className="mb-3 text-sm text-[var(--ink-muted)]">
+          Client: {assignClientId ? ops.getClient(assignClientId)?.fullName : '—'}
+        </p>
+        <div className="space-y-2">
+          {snap.drivers
+            .filter((d) => d.status === 'AVAILABLE' || d.status === 'RESTING')
+            .map((d) => (
+              <button
+                key={d.id}
                 type="button"
-                className="w-full"
-                onClick={() => navigate(`/drivers`)}
+                className="flex w-full items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-start hover:bg-[var(--bg-muted)]"
+                onClick={() => void doAssign(d.id)}
               >
-                Open driver profile
+                <span>
+                  <span className="block text-sm font-medium">{d.name}</span>
+                  <span className="text-xs text-[var(--ink-muted)]">{d.vehicle}</span>
+                </span>
+                <StatusBadge tone={dTone(d.status)}>{d.status}</StatusBadge>
+              </button>
+            ))}
+        </div>
+      </DialogShell>
+
+      <DialogShell open={eodOpen} title="End of Day report" onClose={() => setEodOpen(false)} wide>
+        <Textarea rows={14} value={eodText} onChange={(e) => setEodText(e.target.value)} />
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              void navigator.clipboard.writeText(eodText);
+              push({ tone: 'success', title: 'Copied for WhatsApp / Email' });
+            }}
+          >
+            Export copy
+          </Button>
+          <Button type="button" onClick={() => setEodOpen(false)}>
+            Done
+          </Button>
+        </div>
+      </DialogShell>
+
+      <DetailDrawer
+        open={Boolean(selectedDriver)}
+        title={selectedDriver?.name ?? 'Driver'}
+        onClose={() => setDriverId(null)}
+        footer={
+          selectedDriver ? (
+            <a href={`tel:${selectedDriver.phone}`}>
+              <Button type="button" className="w-full">
+                <Phone className="h-4 w-4" /> Call {selectedDriver.phone}
               </Button>
-            </div>
-          ) : null}
-          {selectedTimelineId ? (
-            <p className="mt-3 text-xs text-[var(--ink-muted)]">
-              Selected itinerary item: {selectedTimelineId}
-            </p>
-          ) : null}
-        </aside>
-      ) : null}
+            </a>
+          ) : null
+        }
+      >
+        {selectedDriver ? (
+          <dl className="space-y-3 text-sm">
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Status</dt><dd><StatusBadge tone={dTone(selectedDriver.status)}>{selectedDriver.status}</StatusBadge></dd></div>
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Vehicle</dt><dd>{selectedDriver.vehicle} · {selectedDriver.plate}</dd></div>
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Assignment</dt><dd>{selectedDriver.assignmentId ?? '—'}</dd></div>
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Passenger</dt><dd>{selectedDriver.passengerName ?? '—'}</dd></div>
+            <div className="flex justify-between"><dt className="text-[var(--ink-muted)]">Rating</dt><dd>{selectedDriver.rating}</dd></div>
+          </dl>
+        ) : null}
+      </DetailDrawer>
     </PageScaffold>
   );
 }
