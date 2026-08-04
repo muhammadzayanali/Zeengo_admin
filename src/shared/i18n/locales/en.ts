@@ -85,6 +85,8 @@ const en = {
     subtitle: 'Sign in with your staff email to continue.',
     email: 'Email',
     password: 'Password',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     submit: 'Log in',
     failed: 'Login failed',
     checkCredentials: 'Check your credentials',

@@ -87,6 +87,8 @@ const ar: TranslationSchema = {
     subtitle: 'سجّل الدخول ببريدك الوظيفي للمتابعة.',
     email: 'البريد الإلكتروني',
     password: 'كلمة المرور',
+    showPassword: 'إظهار كلمة المرور',
+    hidePassword: 'إخفاء كلمة المرور',
     submit: 'تسجيل الدخول',
     failed: 'فشل تسجيل الدخول',
     checkCredentials: 'تحقق من بيانات الدخول',

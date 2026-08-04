@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import {
   loginSchema,
@@ -20,6 +22,7 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { push } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -109,12 +112,28 @@ export function LoginPage() {
           </div>
           <div>
             <Label htmlFor="password">{t('login.password')}</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              {...form.register('password')}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                className="pe-11"
+                {...form.register('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute end-3 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                ) : (
+                  <Eye className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                )}
+              </button>
+            </div>
             <FieldError message={form.formState.errors.password?.message} />
           </div>
           <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
