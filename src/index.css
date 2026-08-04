@@ -33,19 +33,25 @@
 
 html[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0b1220;
-  --bg-elevated: #111827;
-  --bg-muted: #1f2937;
-  --ink: #f9fafb;
-  --ink-muted: #9ca3af;
-  --line: rgba(255, 255, 255, 0.1);
-  --accent-soft: rgba(37, 99, 235, 0.2);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shell: #0f172a;
-  --shell-elevated: #1e293b;
-  --shell-line: rgba(255, 255, 255, 0.1);
-  --shell-ink: #f9fafb;
-  --shell-muted: #9ca3af;
+  /* Pure black canvas · Color.fromRGBO(0, 0, 0, 1) */
+  --bg: #000000;
+  /* Cards & elevated surfaces · Color(0xFF141414) */
+  --bg-elevated: #141414;
+  --bg-muted: #1a1a1a;
+  --ink: #f5f5f5;
+  --ink-muted: #a3a3a3;
+  --line: rgba(255, 255, 255, 0.08);
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-soft: rgba(37, 99, 235, 0.22);
+  --accent-fg: #ffffff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 8px 28px rgba(0, 0, 0, 0.55);
+  /* Shell (header / sidebar) tracks black canvas + card elevated areas */
+  --shell: #000000;
+  --shell-elevated: #141414;
+  --shell-line: rgba(255, 255, 255, 0.08);
+  --shell-ink: #f5f5f5;
+  --shell-muted: #a3a3a3;
 }
 
 * {
