@@ -77,8 +77,9 @@ const ar: TranslationSchema = {
     ai: 'وكيل العمليات',
     aiParser: 'محلل الذكاء الاصطناعي',
     russiaChatbot: 'بوت روسيا',
-    email: 'البريد',
+    email: 'نظام البريد',
     mySchedule: 'جدولي',
+    driversTerminal: 'محطة السائق',
   },
 
   login: {

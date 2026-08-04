@@ -13,6 +13,7 @@ export function useOpsSnapshot() {
     clients: ops.clients,
     sosAlerts: ops.sosAlerts,
     tasks: ops.tasks,
+    payments: ops.payments,
     editRequests: ops.editRequests,
     vendors: ops.vendors,
     packages: ops.packages,

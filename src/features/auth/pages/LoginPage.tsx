@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { homeForRole } from '@/features/auth/permissions';
 import {
   loginSchema,
   type LoginFormValues,
@@ -26,15 +27,15 @@ export function LoginPage() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: import.meta.env.DEV ? 'admin@zeengo.com' : '',
-      password: import.meta.env.DEV ? 'Admin123!' : '',
+      email: '',
+      password: '',
     },
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      await login(values.email, values.password);
-      navigate('/', { replace: true });
+      const user = await login(values.email, values.password);
+      navigate(homeForRole(user.role), { replace: true });
     } catch (error) {
       push({
         tone: 'error',

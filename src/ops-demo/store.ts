@@ -169,7 +169,7 @@ export let drivers: OpsDriver[] = [
     speedKmh: 42,
     etaMin: 14,
     trafficDelay: 6,
-    passengerName: 'Noura Al-Qahtani',
+    passengerName: 'ahmed',
   },
   {
     id: 'drv_ivan',
@@ -190,16 +190,16 @@ export let drivers: OpsDriver[] = [
 ];
 
 export let clients: OpsClient[] = [
-  { id: 'cli_01', znCode: 'ZN0001', fullName: 'Abdullah Al-Rashid', phone: '+966 50 111 0001', email: 'abdullah@example.com', language: 'ar', packageName: 'Royal Concierge', driverId: 'drv_alexei', tripStart: '2026-08-03', tripEnd: '2026-08-10', status: 'active', isVip: true, medicalNotes: 'None', emergencyContact: '+966 50 999 0001', passportMasked: 'P••••1001', hotel: 'Four Seasons Moscow', dietary: 'Halal', totalSpent: 12500, outstanding: 0 },
-  { id: 'cli_02', znCode: 'ZN0002', fullName: 'فهد الشمري', phone: '+966 50 111 0002', email: 'fahd@example.com', language: 'ar', packageName: 'Royal Concierge', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-12', status: 'active', isVip: true, medicalNotes: 'Mild hypertension — avoid long waits', emergencyContact: '+966 50 999 0002 (brother)', passportMasked: 'P••••1002', hotel: 'Ararat Park Hyatt', dietary: 'No shellfish', totalSpent: 9800, outstanding: 1750 },
-  { id: 'cli_03', znCode: 'ZN0003', fullName: 'Noura Al-Qahtani', phone: '+966 50 111 0003', email: 'noura@example.com', language: 'en', packageName: 'Family Explorer', driverId: 'drv_dmitri', tripStart: '2026-08-04', tripEnd: '2026-08-08', status: 'active', isVip: false, medicalNotes: '', emergencyContact: '+966 50 999 0003', passportMasked: 'P••••1003', hotel: 'Metropol', dietary: 'Child meal', totalSpent: 4200, outstanding: 0 },
-  { id: 'cli_04', znCode: 'ZN0004', fullName: 'Khalid bin Saeed', phone: '+966 50 111 0004', email: 'khalid@example.com', language: 'ar', packageName: 'Royal Concierge', driverId: null, tripStart: '2026-08-05', tripEnd: '2026-08-11', status: 'active', isVip: true, medicalNotes: '', emergencyContact: '+966 50 999 0004', passportMasked: 'P••••1004', hotel: 'Ritz Moscow', dietary: '', totalSpent: 15000, outstanding: 0 },
+  { id: 'cli_01', znCode: 'ZN0001', fullName: 'ch Salman', phone: '+966 50 111 0001', email: 'salman@example.com', language: 'ar', packageName: 'Royal Package', driverId: 'drv_alexei', tripStart: '2026-08-03', tripEnd: '2026-08-10', status: 'active', isVip: true, medicalNotes: 'None', emergencyContact: '+966 50 999 0001', passportMasked: 'P••••1001', hotel: 'Four Seasons Moscow', dietary: 'Halal', totalSpent: 12500, outstanding: 3200 },
+  { id: 'cli_02', znCode: 'ZN0002', fullName: 'فهد الشمري', phone: '+966 50 111 0002', email: 'fahd@example.com', language: 'ar', packageName: 'Royal Package', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-12', status: 'active', isVip: true, medicalNotes: 'Mild hypertension — avoid long waits', emergencyContact: '+966 50 999 0002 (brother)', passportMasked: 'P••••1002', hotel: 'Ararat Park Hyatt', dietary: 'No shellfish', totalSpent: 9800, outstanding: 1750 },
+  { id: 'cli_03', znCode: 'ZN0003', fullName: 'ahmed', phone: '+966 50 111 0003', email: 'ahmed@example.com', language: 'en', packageName: 'Family Package', driverId: 'drv_dmitri', tripStart: '2026-08-04', tripEnd: '2026-08-08', status: 'active', isVip: false, medicalNotes: '', emergencyContact: '+966 50 999 0003', passportMasked: 'P••••1003', hotel: 'Metropol', dietary: 'Child meal', totalSpent: 4200, outstanding: 900 },
+  { id: 'cli_04', znCode: 'ZN0004', fullName: 'Khalid bin Saeed', phone: '+966 50 111 0004', email: 'khalid@example.com', language: 'ar', packageName: 'Royal Package', driverId: null, tripStart: '2026-08-05', tripEnd: '2026-08-11', status: 'active', isVip: true, medicalNotes: '', emergencyContact: '+966 50 999 0004', passportMasked: 'P••••1004', hotel: 'Ritz Moscow', dietary: '', totalSpent: 15000, outstanding: 0 },
   { id: 'cli_05', znCode: 'ZN0005', fullName: 'Maria Ivanova', phone: '+7 903 200 3005', email: 'maria@example.com', language: 'ru', packageName: 'City Express', driverId: 'drv_ivan', tripStart: '2026-08-04', tripEnd: '2026-08-06', status: 'active', isVip: false, medicalNotes: '', emergencyContact: '+7 903 999 0005', passportMasked: 'P••••2005', hotel: 'Cosmos', dietary: '', totalSpent: 1100, outstanding: 200 },
   { id: 'cli_06', znCode: 'ZN0006', fullName: 'Yousef Al-Harbi', phone: '+966 50 111 0006', email: 'yousef@example.com', language: 'ar', packageName: 'City Express', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-07', status: 'active', isVip: false, medicalNotes: '', emergencyContact: '+966 50 999 0006', passportMasked: 'P••••1006', hotel: 'Ibis', dietary: '', totalSpent: 800, outstanding: 0 },
-  { id: 'cli_07', znCode: 'ZN0007', fullName: 'سارة العتيبي', phone: '+966 50 111 0007', email: 'sara@example.com', language: 'ar', packageName: 'Family Explorer', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-09', status: 'active', isVip: true, medicalNotes: 'Peanut allergy', emergencyContact: '+966 50 999 0007', passportMasked: 'P••••1007', hotel: 'Four Seasons', dietary: 'No peanuts', totalSpent: 5600, outstanding: 0 },
+  { id: 'cli_07', znCode: 'ZN0007', fullName: 'ريم الغامدي', phone: '+966 50 111 0007', email: 'reem.g@example.com', language: 'ar', packageName: 'Family Package', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-09', status: 'active', isVip: true, medicalNotes: 'Peanut allergy', emergencyContact: '+966 50 999 0007', passportMasked: 'P••••1007', hotel: 'Four Seasons', dietary: 'No peanuts', totalSpent: 5600, outstanding: 1400 },
   { id: 'cli_08', znCode: 'ZN0008', fullName: 'Hassan Al-Dosari', phone: '+966 50 111 0008', email: 'hassan@example.com', language: 'en', packageName: 'City Express', driverId: null, tripStart: '2026-07-01', tripEnd: '2026-07-05', status: 'completed', isVip: false, medicalNotes: '', emergencyContact: '', passportMasked: 'P••••1008', hotel: '—', dietary: '', totalSpent: 900, outstanding: 0 },
-  { id: 'cli_09', znCode: 'ZN0009', fullName: 'Elena Smirnova', phone: '+7 903 200 3009', email: 'elena@example.com', language: 'ru', packageName: 'Family Explorer', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-08', status: 'active', isVip: false, medicalNotes: '', emergencyContact: '', passportMasked: 'P••••2009', hotel: 'National', dietary: '', totalSpent: 2100, outstanding: 400 },
-  { id: 'cli_10', znCode: 'ZN0010', fullName: 'Turki Al-Ghamdi', phone: '+966 50 111 0010', email: 'turki@example.com', language: 'ar', packageName: 'Royal Concierge', driverId: 'drv_alexei', tripStart: '2026-08-04', tripEnd: '2026-08-14', status: 'active', isVip: true, medicalNotes: '', emergencyContact: '+966 50 999 0010', passportMasked: 'P••••1010', hotel: 'St. Regis', dietary: 'Halal', totalSpent: 22000, outstanding: 0 },
+  { id: 'cli_09', znCode: 'ZN0009', fullName: 'Elena Smirnova', phone: '+7 903 200 3009', email: 'elena@example.com', language: 'ru', packageName: 'Family Package', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-08', status: 'active', isVip: false, medicalNotes: '', emergencyContact: '', passportMasked: 'P••••2009', hotel: 'National', dietary: '', totalSpent: 2100, outstanding: 400 },
+  { id: 'cli_10', znCode: 'ZN0010', fullName: 'Turki Al-Ghamdi', phone: '+966 50 111 0010', email: 'turki@example.com', language: 'ar', packageName: 'Royal Package', driverId: 'drv_alexei', tripStart: '2026-08-04', tripEnd: '2026-08-14', status: 'active', isVip: true, medicalNotes: '', emergencyContact: '+966 50 999 0010', passportMasked: 'P••••1010', hotel: 'St. Regis', dietary: 'Halal', totalSpent: 22000, outstanding: 0 },
   { id: 'cli_11', znCode: 'ZN0011', fullName: 'Reem Al-Zahrani', phone: '+966 50 111 0011', email: 'reem@example.com', language: 'ar', packageName: 'City Express', driverId: null, tripStart: '2026-08-04', tripEnd: '2026-08-05', status: 'active', isVip: false, medicalNotes: '', emergencyContact: '', passportMasked: 'P••••1011', hotel: 'Hilton', dietary: '', totalSpent: 450, outstanding: 0 },
 ];
 
@@ -294,6 +294,41 @@ export let emailLogs: EmailLog[] = [
   { id: 'em_2', to: 'noura@example.com', template: 'Invoice receipt', status: 'delivered', at: sosAgo(100) },
   { id: 'em_3', to: 'turki@example.com', template: 'SOS follow-up', status: 'sent', at: sosAgo(20) },
 ];
+
+export type OpsPayment = {
+  id: string;
+  clientId: string;
+  amount: number;
+  method: 'cash' | 'stripe';
+  note: string;
+  at: string;
+  stripeUrl?: string;
+  recordedBy: string;
+};
+export let payments: OpsPayment[] = [
+  {
+    id: 'pay_1',
+    clientId: 'cli_01',
+    amount: 2500,
+    method: 'stripe',
+    note: 'Deposit — Royal Package',
+    at: sosAgo(400),
+    stripeUrl: 'https://pay.stripe.com/demo/zn0001',
+    recordedBy: 'Omar Hassan',
+  },
+  {
+    id: 'pay_2',
+    clientId: 'cli_03',
+    amount: 800,
+    method: 'cash',
+    note: 'On-ground collection Metropol lobby',
+    at: sosAgo(120),
+    recordedBy: 'Omar Hassan',
+  },
+];
+
+/** Demo logged-in field driver (driver@zeengo.com maps here) */
+export const DEMO_DRIVER_ID = 'drv_dmitri';
 
 export const emailTemplates = [
   { id: 'tpl_itinerary', name: 'Booking Confirmations' },
@@ -441,6 +476,56 @@ export async function rejectEdit(id: string) {
   er.status = 'rejected';
   emit();
   return er;
+}
+
+export async function collectCash(clientId: string, amount: number, note: string) {
+  await delay();
+  const c = clients.find((x) => x.id === clientId);
+  if (!c) throw new Error('Client not found');
+  const pay: OpsPayment = {
+    id: `pay_${Date.now()}`,
+    clientId,
+    amount,
+    method: 'cash',
+    note: note || 'Cash collection',
+    at: new Date().toISOString(),
+    recordedBy: 'Splizer',
+  };
+  payments = [pay, ...payments];
+  c.totalSpent += amount;
+  c.outstanding = Math.max(0, c.outstanding - amount);
+  emit();
+  return pay;
+}
+
+export async function createStripeLink(clientId: string, amount: number) {
+  await delay();
+  const c = clients.find((x) => x.id === clientId);
+  if (!c) throw new Error('Client not found');
+  const url = `https://pay.stripe.com/demo/${c.znCode.toLowerCase()}-${Date.now().toString(36)}`;
+  const pay: OpsPayment = {
+    id: `pay_${Date.now()}`,
+    clientId,
+    amount,
+    method: 'stripe',
+    note: `Stripe link generated · ${c.packageName}`,
+    at: new Date().toISOString(),
+    stripeUrl: url,
+    recordedBy: 'Splizer',
+  };
+  payments = [pay, ...payments];
+  emit();
+  return pay;
+}
+
+export async function setTaskStatus(id: string, status: OpsTaskStatus) {
+  await delay();
+  const t = tasks.find((x) => x.id === id);
+  if (!t) return null;
+  t.status = status;
+  t.done = status === 'completed';
+  emit();
+  return t;
 }
 
 export async function addChatMessage(channelId: string, body: string, author = 'You') {

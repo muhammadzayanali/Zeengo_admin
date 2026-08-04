@@ -75,8 +75,9 @@ const en = {
     ai: 'Ops Agent',
     aiParser: 'AI Parser',
     russiaChatbot: 'Russia Chatbot',
-    email: 'Email',
-    mySchedule: 'My schedule',
+    email: 'Email System',
+    mySchedule: 'My Schedule',
+    driversTerminal: 'Drivers Terminal',
   },
 
   login: {
