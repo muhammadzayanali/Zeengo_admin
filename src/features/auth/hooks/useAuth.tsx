@@ -10,6 +10,13 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/features/auth/services/auth.api';
 import {
+  clearStaticUser,
+  isStaticToken,
+  meStatic,
+  staffLoginStatic,
+  USE_STATIC_AUTH,
+} from '@/features/auth/staticAuth';
+import {
   clearTokens,
   getAccessToken,
   getRefreshToken,
@@ -55,19 +62,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const meQuery = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => {
+      // Client-demo: resolve session from sessionStorage, no /auth/me call
+      if (USE_STATIC_AUTH || isStaticToken(getAccessToken())) {
+        const result = meStatic();
+        return withNormalizedRole(result.user) as StaffUser;
+      }
       const result = await authApi.me();
       if (result.type !== 'staff') throw new Error('Staff access required');
       return withNormalizedRole(result.user) as StaffUser;
     },
     enabled: Boolean(token),
     retry: false,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: USE_STATIC_AUTH ? Infinity : 0,
+    gcTime: USE_STATIC_AUTH ? Infinity : 0,
   });
 
   const login = useCallback(
     async (email: string, password: string) => {
       queryClient.removeQueries({ queryKey: ['auth', 'me'] });
+
+      if (USE_STATIC_AUTH) {
+        const result = staffLoginStatic(email, password);
+        const user = withNormalizedRole(result.user) as StaffUser;
+        setTokens(result.accessToken, result.refreshToken);
+        setToken(result.accessToken);
+        queryClient.setQueryData(['auth', 'me'], user);
+        return user;
+      }
+
       const result = await authApi.staffLogin(email.trim().toLowerCase(), password);
       const user = withNormalizedRole(result.user) as StaffUser;
       setTokens(result.accessToken, result.refreshToken);
@@ -80,10 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     const refresh = getRefreshToken();
-    try {
-      if (refresh) await authApi.logout(refresh);
-    } catch {
-      /* ignore */
+    clearStaticUser();
+    if (!USE_STATIC_AUTH && !isStaticToken(refresh)) {
+      try {
+        if (refresh) await authApi.logout(refresh);
+      } catch {
+        /* ignore */
+      }
     }
     clearTokens();
     setToken(null);
