@@ -12,7 +12,7 @@ import { cn } from '@/shared/lib/cn';
 
 export function AppShell() {
   const { t } = useTranslation();
-  const { hasRole } = useAuth();
+  const { hasRole, can, homePath } = useAuth();
   const [navOpen, setNavOpen] = useState(false);
   useOpsRealtime();
 
@@ -20,13 +20,14 @@ export function AppShell() {
     queryKey: ['notifications', 'unread-count'],
     queryFn: ({ signal }) => notificationsApi.unreadCount(signal),
     refetchInterval: 60_000,
+    enabled: can('notifications'),
   });
 
   const sosQuery = useQuery({
     queryKey: ['sos', 'active-count'],
     queryFn: ({ signal }) => sosApi.list({ page: 1, limit: 1, status: 'active' }, signal),
     refetchInterval: 60_000,
-    enabled: hasRole('admin', 'ops_manager', 'support', 'splizer', 'driver'),
+    enabled: can('sos'),
   });
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export function AppShell() {
               {t('nav.commandCenter')}
             </p>
             <NavLink
-              to="/"
+              to={homePath}
               end
               className="mt-1 block text-sm font-semibold text-[var(--shell-ink)]"
             >

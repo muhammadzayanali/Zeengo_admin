@@ -75,8 +75,11 @@ const ar: TranslationSchema = {
     roles: 'الأدوار',
     settings: 'الإعدادات',
     ai: 'وكيل العمليات',
-    email: 'البريد',
+    aiParser: 'محلل الذكاء الاصطناعي',
+    russiaChatbot: 'بوت روسيا',
+    email: 'نظام البريد',
     mySchedule: 'جدولي',
+    driversTerminal: 'محطة السائق',
   },
 
   login: {
@@ -85,6 +88,8 @@ const ar: TranslationSchema = {
     subtitle: 'سجّل الدخول ببريدك الوظيفي للمتابعة.',
     email: 'البريد الإلكتروني',
     password: 'كلمة المرور',
+    showPassword: 'إظهار كلمة المرور',
+    hidePassword: 'إخفاء كلمة المرور',
     submit: 'تسجيل الدخول',
     failed: 'فشل تسجيل الدخول',
     checkCredentials: 'تحقق من بيانات الدخول',

@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import type { StaffRole } from '@/shared/api/types';
+import { canAccessPath, homeForRole } from '@/features/auth/permissions';
 import { Spinner } from '@/shared/ui';
 
 export function RequireAuth({
@@ -8,7 +9,7 @@ export function RequireAuth({
 }: {
   roles?: StaffRole[];
 }) {
-  const { isAuthenticated, isLoading, hasRole } = useAuth();
+  const { isAuthenticated, isLoading, hasRole, user, role } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -19,12 +20,16 @@ export function RequireAuth({
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user || !role) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (roles && !hasRole(...roles)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={homeForRole(role)} replace />;
+  }
+
+  if (!canAccessPath(role, location.pathname)) {
+    return <Navigate to={homeForRole(role)} replace />;
   }
 
   return <Outlet />;

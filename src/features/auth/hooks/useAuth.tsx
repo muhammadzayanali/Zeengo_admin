@@ -16,17 +16,37 @@ import {
   setTokens,
 } from '@/shared/api/client';
 import type { StaffRole, StaffUser } from '@/shared/api/types';
+import {
+  canAccessPath,
+  canSeeNavPath,
+  homeForRole,
+  normalizeStaffRole,
+  ROLE_PERMISSIONS,
+  type PermissionKey,
+} from '@/features/auth/permissions';
 
 interface AuthContextValue {
   user: StaffUser | null;
+  role: StaffRole | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<StaffUser>;
   logout: () => Promise<void>;
   hasRole: (...roles: StaffRole[]) => boolean;
+  can: (permission: PermissionKey) => boolean;
+  canAccess: (pathname: string) => boolean;
+  canSeeNav: (path: string) => boolean;
+  homePath: string;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function withNormalizedRole(user: StaffUser | null): StaffUser | null {
+  if (!user) return null;
+  const role = normalizeStaffRole(user.role);
+  if (!role || role === user.role) return user;
+  return { ...user, role };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -37,20 +57,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const result = await authApi.me();
       if (result.type !== 'staff') throw new Error('Staff access required');
-      return result.user;
+      return withNormalizedRole(result.user) as StaffUser;
     },
     enabled: Boolean(token),
     retry: false,
-    staleTime: 60_000,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const result = await authApi.staffLogin(email, password);
+      queryClient.removeQueries({ queryKey: ['auth', 'me'] });
+      const result = await authApi.staffLogin(email.trim().toLowerCase(), password);
+      const user = withNormalizedRole(result.user) as StaffUser;
       setTokens(result.accessToken, result.refreshToken);
       setToken(result.accessToken);
-      queryClient.setQueryData(['auth', 'me'], result.user);
-      return result.user;
+      queryClient.setQueryData(['auth', 'me'], user);
+      return user;
     },
     [queryClient],
   );
@@ -67,18 +90,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
   }, [queryClient]);
 
-  const user = token ? (meQuery.data ?? null) : null;
+  const user = token ? withNormalizedRole(meQuery.data ?? null) : null;
+  const role = normalizeStaffRole(user?.role);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      isLoading: Boolean(token) && meQuery.isLoading,
-      isAuthenticated: Boolean(user),
+      role,
+      isLoading: Boolean(token) && (meQuery.isLoading || meQuery.isFetching) && !user,
+      isAuthenticated: Boolean(user && role),
       login,
       logout,
-      hasRole: (...roles) => Boolean(user && roles.includes(user.role)),
+      hasRole: (...roles) => Boolean(role && roles.includes(role)),
+      can: (permission) => {
+        if (!role) return false;
+        if (role === 'admin') return true;
+        return ROLE_PERMISSIONS[permission].includes(role);
+      },
+      canAccess: (pathname) => canAccessPath(role, pathname),
+      canSeeNav: (path) => canSeeNavPath(role, path),
+      homePath: homeForRole(role),
     }),
-    [user, token, meQuery.isLoading, login, logout],
+    [user, role, token, meQuery.isLoading, meQuery.isFetching, login, logout],
   );
 
   return createElement(AuthContext.Provider, { value }, children);

@@ -4,9 +4,63 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { NAV_SECTIONS } from '@/app/nav';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import type { StaffRole } from '@/shared/api/types';
 import { cn } from '@/shared/lib/cn';
 
 const COLLAPSE_KEY = 'zeengo_nav_collapsed';
+
+/** Paths that must never appear in sidebar for splizer (CLIENTS group + others). */
+const SPLIZER_HIDDEN_PATHS = new Set([
+  '/',
+  '/dashboard',
+  '/operations-room',
+  '/operations',
+  '/daily-ops',
+  '/sos',
+  '/tasks',
+  '/bookings',
+  '/clients',
+  '/edit-requests',
+  '/vip',
+  '/zeen-rafeq',
+  '/drivers',
+  '/guides',
+  '/vendors',
+  '/finance',
+  '/payments',
+  '/packages',
+  '/ai',
+  '/ai-parser',
+  '/email',
+  '/users',
+  '/roles',
+  '/settings',
+  '/driver/me',
+]);
+
+/** Available to every staff role */
+const GLOBAL_NAV_PATHS = new Set(['/chat', '/russia-chatbot']);
+
+function navVisibleForRole(role: StaffRole, to: string, roles: readonly StaffRole[]): boolean {
+  // Team Chat + Russia Chatbot: all roles
+  if (GLOBAL_NAV_PATHS.has(to)) return true;
+
+  // Role must be on the item's roles list
+  if (!roles.includes(role)) return false;
+
+  // Extra hard rule: splizer never sees CLIENTS / ops / etc.
+  if (role === 'splizer') {
+    if (SPLIZER_HIDDEN_PATHS.has(to)) return false;
+    return (
+      to === '/splizer' ||
+      to === '/chat' ||
+      to === '/russia-chatbot' ||
+      to === '/notifications'
+    );
+  }
+
+  return true;
+}
 
 export function Sidebar({
   sosCount = 0,
@@ -18,17 +72,25 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const { t } = useTranslation();
-  const { hasRole } = useAuth();
+  const { user, role: authRole } = useAuth();
+  const role = (authRole ?? user?.role ?? null) as StaffRole | null;
   const { pathname } = useLocation();
 
-  const sections = useMemo(
-    () =>
-      NAV_SECTIONS.map((section) => ({
+  const sections = useMemo(() => {
+    if (!role) return [];
+
+    return NAV_SECTIONS.map((section) => {
+      // Splizer: never render the entire CLIENTS group
+      if (role === 'splizer' && section.id === 'clients') {
+        return { ...section, items: [] };
+      }
+
+      return {
         ...section,
-        items: section.items.filter((item) => hasRole(...item.roles)),
-      })).filter((section) => section.items.length > 0),
-    [hasRole],
-  );
+        items: section.items.filter((item) => navVisibleForRole(role, item.to, item.roles)),
+      };
+    }).filter((section) => section.items.length > 0);
+  }, [role]);
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     try {
@@ -43,7 +105,6 @@ export function Sidebar({
     localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsed));
   }, [collapsed]);
 
-  // Auto-expand section containing active route
   useEffect(() => {
     const active = sections.find((s) =>
       s.items.some((item) =>
@@ -69,7 +130,7 @@ export function Sidebar({
         );
 
         return (
-          <div key={section.id} className="pb-1">
+          <div key={section.id} className="pb-1" data-section={section.id}>
             <button
               type="button"
               onClick={() => toggleSection(section.id)}
@@ -94,7 +155,7 @@ export function Sidebar({
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <li key={item.to}>
+                    <li key={`${item.to}-${item.labelKey}`}>
                       <NavLink
                         to={item.to}
                         end={item.end}

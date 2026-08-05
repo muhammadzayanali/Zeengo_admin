@@ -1,188 +1,170 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { clientsApi } from '../services/clients.api';
+import { useMemo, useState } from 'react';
+import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
 import {
+  ActionDropdown,
   Button,
-  DialogShell,
-  EmptyState,
-  ErrorState,
-  Input,
-  Label,
+  DetailDrawer,
   PageScaffold,
-  Pagination,
   SearchBar,
-  Skeleton,
+  Select,
   StatsCard,
+  StatusBadge,
   useToast,
 } from '@/shared/ui';
-import { ApiClientError } from '@/shared/api/client';
-import type { Client } from '@/shared/api/types';
-import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
 export function ClientsPage() {
-  const { t } = useTranslation();
-  const [params] = useSearchParams();
-  const queryClient = useQueryClient();
+  const snap = useOpsSnapshot();
   const { push } = useToast();
-  const [search, setSearch] = useState(() => params.get('search') ?? '');
-  const debouncedSearch = useDebouncedValue(search);
-  const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState<Client | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState('');
+  const [vipOnly, setVipOnly] = useState(false);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [revealPassport, setRevealPassport] = useState(false);
 
-  useEffect(() => {
-    const q = params.get('search') ?? '';
-    setSearch(q);
-    setPage(1);
-  }, [params]);
+  const filtered = useMemo(() => {
+    return snap.clients.filter((c) => {
+      if (status && c.status !== status) return false;
+      if (vipOnly && !c.isVip) return false;
+      const hay = `${c.znCode} ${c.fullName} ${c.phone} ${c.email}`.toLowerCase();
+      if (q && !hay.includes(q.toLowerCase())) return false;
+      return true;
+    });
+  }, [snap.clients, q, status, vipOnly]);
 
-  const clientsQuery = useQuery({
-    queryKey: ['clients', { page, search: debouncedSearch }],
-    queryFn: ({ signal }) =>
-      clientsApi.list({ page, limit: 20, search: debouncedSearch || undefined }, signal),
-  });
-
-  async function handleSave(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!editing) return;
-    setFormError(null);
-    const form = new FormData(e.currentTarget);
-    setSubmitting(true);
-    try {
-      await clientsApi.update(editing.id, {
-        fullName: String(form.get('fullName') || ''),
-        phone: String(form.get('phone') || ''),
-        email: String(form.get('email') || '') || null,
-        nationality: String(form.get('nationality') || '') || null,
-        whatsapp: String(form.get('whatsapp') || '') || null,
-      });
-      push({ tone: 'success', title: t('clients.updated') });
-      setEditing(null);
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-    } catch (error) {
-      setFormError(error instanceof ApiClientError ? error.message : t('clients.updateFailed'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const profile = profileId ? ops.getClient(profileId) : null;
+  const profileDriver = profile?.driverId ? ops.getDriver(profile.driverId) : null;
 
   return (
     <PageScaffold
-      title={t('clients.title')}
-      description={t('clients.description')}
+      title="Clients"
+      description="Complete customer registry — ZN codes, packages, drivers, and account status."
       stats={
-        clientsQuery.data ? (
-          <StatsCard label={t('bookings.total')} value={clientsQuery.data.meta.total} />
-        ) : undefined
+        <>
+          <StatsCard label="Total" value={snap.clients.length} />
+          <StatsCard label="Active" value={snap.clients.filter((c) => c.status === 'active').length} tone="success" />
+          <StatsCard label="VIP" value={snap.clients.filter((c) => c.isVip).length} tone="accent" />
+          <StatsCard label="Unassigned" value={snap.clients.filter((c) => c.status === 'active' && !c.driverId).length} tone="warning" />
+        </>
       }
       filters={
-        <SearchBar
-          className="max-w-xs"
-          placeholder={t('clients.searchPlaceholder')}
-          value={search}
-          onChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
-        />
+        <>
+          <SearchBar value={q} onChange={setQ} placeholder="Name, phone, or ZN…" className="max-w-sm" />
+          <Select className="max-w-[160px]" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="completed">Completed</option>
+          </Select>
+          <label className="inline-flex items-center gap-2 text-sm text-[var(--ink-muted)]">
+            <input type="checkbox" checked={vipOnly} onChange={(e) => setVipOnly(e.target.checked)} />
+            VIP only
+          </label>
+        </>
       }
     >
-      {clientsQuery.isLoading ? (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16" />
-          ))}
-        </div>
-      ) : clientsQuery.isError ? (
-        <ErrorState
-          description={t('clients.loadFailed')}
-          onRetry={() => clientsQuery.refetch()}
-        />
-      ) : !clientsQuery.data?.data.length ? (
-        <EmptyState title={t('clients.empty')} />
-      ) : (
-        <>
-          <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-[var(--bg-muted)] text-xs font-medium uppercase text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-3">{t('common.name')}</th>
-                  <th className="px-4 py-3">{t('common.phone')}</th>
-                  <th className="px-4 py-3">{t('common.email')}</th>
-                  <th className="px-4 py-3">{t('bookings.nationality')}</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {clientsQuery.data.data.map((client) => (
-                  <tr key={client.id} className="hover:bg-[var(--bg-muted)]/70">
-                    <td className="px-4 py-3 font-semibold">{client.fullName}</td>
-                    <td className="px-4 py-3">{client.phone}</td>
-                    <td className="px-4 py-3">{client.email ?? '—'}</td>
-                    <td className="px-4 py-3">{client.nationality ?? '—'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Button variant="secondary" onClick={() => setEditing(client)}>
-                        {t('edit')}
-                      </Button>
+      <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead className="bg-[var(--bg-muted)] text-xs font-medium uppercase text-[var(--ink-muted)] sticky top-0">
+              <tr>
+                <th className="px-4 py-3 text-start">Client ID</th>
+                <th className="px-4 py-3 text-start">Name</th>
+                <th className="px-4 py-3 text-start">Contact</th>
+                <th className="px-4 py-3 text-start">Package</th>
+                <th className="px-4 py-3 text-start">Driver</th>
+                <th className="px-4 py-3 text-start">Trip</th>
+                <th className="px-4 py-3 text-start">Status</th>
+                <th className="px-4 py-3 text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => {
+                const d = c.driverId ? ops.getDriver(c.driverId) : null;
+                return (
+                  <tr key={c.id} className="border-t border-[var(--line)] hover:bg-[var(--bg-muted)]/70">
+                    <td className="px-4 py-3 font-medium">{c.znCode}</td>
+                    <td className="px-4 py-3">
+                      <button type="button" className="font-medium text-[var(--accent)] hover:underline" onClick={() => { setProfileId(c.id); setRevealPassport(false); }}>
+                        {c.fullName}
+                      </button>
+                      {c.isVip ? <StatusBadge tone="accent" className="ms-2">VIP</StatusBadge> : null}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--ink-muted)]">
+                      <div>{c.phone}</div>
+                      <div className="text-xs">{c.email}</div>
+                    </td>
+                    <td className="px-4 py-3">{c.packageName}</td>
+                    <td className="px-4 py-3">{d?.name ?? <span className="text-[var(--danger)]">Unassigned</span>}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--ink-muted)]">{c.tripStart} → {c.tripEnd}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge tone={c.status === 'active' ? 'success' : c.status === 'suspended' ? 'warning' : 'default'}>
+                        {c.status}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-4 py-3 text-end">
+                      <ActionDropdown
+                        items={[
+                          { id: 'view', label: 'Open profile', onClick: () => { setProfileId(c.id); setRevealPassport(false); } },
+                          { id: 'notify', label: 'Send push (demo)', onClick: () => push({ tone: 'success', title: 'Push queued' }) },
+                          { id: 'driver', label: 'Assign driver…', onClick: () => push({ tone: 'success', title: 'Use Drivers match engine' }) },
+                        ]}
+                      />
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-4">
-            <Pagination
-              page={clientsQuery.data.meta.page}
-              limit={clientsQuery.data.meta.limit}
-              total={clientsQuery.data.meta.total}
-              onPageChange={setPage}
-            />
-          </div>
-        </>
-      )}
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      <DialogShell
-        open={Boolean(editing)}
-        title={t('clients.editClient')}
-        onClose={() => setEditing(null)}
+      <DetailDrawer
+        open={Boolean(profile)}
+        title={profile ? `${profile.znCode} · ${profile.fullName}` : 'Client'}
+        onClose={() => setProfileId(null)}
+        wide
       >
-        {editing ? (
-          <form onSubmit={handleSave} className="flex flex-col gap-4">
-            <div>
-              <Label htmlFor="fullName">{t('clients.fullName')}</Label>
-              <Input id="fullName" name="fullName" defaultValue={editing.fullName} required />
-            </div>
-            <div>
-              <Label htmlFor="phone">{t('common.phone')}</Label>
-              <Input id="phone" name="phone" defaultValue={editing.phone} required />
-            </div>
-            <div>
-              <Label htmlFor="email">{t('common.email')}</Label>
-              <Input id="email" name="email" type="email" defaultValue={editing.email ?? ''} />
-            </div>
-            <div>
-              <Label htmlFor="nationality">{t('bookings.nationality')}</Label>
-              <Input id="nationality" name="nationality" defaultValue={editing.nationality ?? ''} />
-            </div>
-            <div>
-              <Label htmlFor="whatsapp">{t('clients.whatsapp')}</Label>
-              <Input id="whatsapp" name="whatsapp" defaultValue={editing.whatsapp ?? ''} />
-            </div>
-            {formError ? <p className="text-sm text-[var(--danger)]">{formError}</p> : null}
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
-                {t('cancel')}
-              </Button>
-              <Button type="submit" loading={submitting}>
-                {t('saveChanges')}
-              </Button>
-            </div>
-          </form>
+        {profile ? (
+          <div className="space-y-5 text-sm">
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Overview</h3>
+              <dl className="mt-2 space-y-2">
+                <div className="flex justify-between gap-2"><dt className="text-[var(--ink-muted)]">Language</dt><dd>{profile.language.toUpperCase()}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-[var(--ink-muted)]">Phone</dt><dd>{profile.phone}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-[var(--ink-muted)]">Email</dt><dd>{profile.email}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-[var(--ink-muted)]">Hotel</dt><dd>{profile.hotel}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-[var(--ink-muted)]">Medical</dt><dd>{profile.medicalNotes || '—'}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-[var(--ink-muted)]">Dietary</dt><dd>{profile.dietary || '—'}</dd></div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-[var(--ink-muted)]">Passport</dt>
+                  <dd>
+                    <button type="button" className="text-[var(--accent)]" onClick={() => setRevealPassport((v) => !v)}>
+                      {revealPassport ? profile.passportMasked.replace('•', '') + ' (demo masked)' : profile.passportMasked + ' · reveal'}
+                    </button>
+                  </dd>
+                </div>
+              </dl>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Trip itinerary</h3>
+              <ol className="mt-2 space-y-2 border-s border-[var(--line)] ps-3">
+                <li><span className="text-xs text-[var(--ink-muted)]">{profile.tripStart}</span><br />Arrival / hotel check-in · {profile.hotel}</li>
+                <li><span className="text-xs text-[var(--ink-muted)]">Day 2–n</span><br />Transfers + packages · {profile.packageName}</li>
+                <li><span className="text-xs text-[var(--ink-muted)]">{profile.tripEnd}</span><br />Departure transfer</li>
+              </ol>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Financial</h3>
+              <div className="mt-2 flex justify-between"><span className="text-[var(--ink-muted)]">Total spent</span><span>${profile.totalSpent.toLocaleString()}</span></div>
+              <div className="mt-1 flex justify-between"><span className="text-[var(--ink-muted)]">Outstanding</span><span className={profile.outstanding ? 'text-[var(--danger)]' : ''}>${profile.outstanding.toLocaleString()}</span></div>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">Driver</h3>
+              <p className="mt-1">{profileDriver ? `${profileDriver.name} · ${profileDriver.phone}` : 'Unassigned'}</p>
+            </section>
+          </div>
         ) : null}
-      </DialogShell>
+      </DetailDrawer>
     </PageScaffold>
   );
 }

@@ -73,8 +73,11 @@ const en = {
     roles: 'Roles',
     settings: 'Settings',
     ai: 'Ops Agent',
-    email: 'Email',
-    mySchedule: 'My schedule',
+    aiParser: 'AI Parser',
+    russiaChatbot: 'Russia Chatbot',
+    email: 'Email System',
+    mySchedule: 'My Schedule',
+    driversTerminal: 'Drivers Terminal',
   },
 
   login: {
@@ -83,6 +86,8 @@ const en = {
     subtitle: 'Sign in with your staff email to continue.',
     email: 'Email',
     password: 'Password',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     submit: 'Log in',
     failed: 'Login failed',
     checkCredentials: 'Check your credentials',

@@ -23,8 +23,11 @@ import {
   Shield,
   Settings,
   Route,
+  Sparkles,
+  Languages,
 } from 'lucide-react';
 import type { StaffRole } from '@/shared/api/types';
+import { ROLE_PERMISSIONS } from '@/features/auth/permissions';
 
 export type NavItem = {
   to: string;
@@ -41,7 +44,7 @@ export type NavSection = {
 };
 
 /**
- * Command Center IA — grouped, iconed, role-gated.
+ * Sidebar IA + roles from the product RBAC matrix.
  */
 export const NAV_SECTIONS: NavSection[] = [
   {
@@ -51,32 +54,32 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         to: '/',
         labelKey: 'nav.dashboard',
-        roles: ['admin', 'ops_manager'],
+        roles: ROLE_PERMISSIONS.dashboard,
         icon: LayoutDashboard,
         end: true,
       },
       {
         to: '/operations-room',
         labelKey: 'nav.operationsRoom',
-        roles: ['admin', 'ops_manager', 'support'],
+        roles: ROLE_PERMISSIONS.operationsRoom,
         icon: Map,
       },
       {
         to: '/daily-ops',
         labelKey: 'nav.dailyOps',
-        roles: ['admin', 'ops_manager', 'support', 'driver'],
+        roles: ROLE_PERMISSIONS.dailyOps,
         icon: CalendarCheck,
       },
       {
         to: '/sos',
         labelKey: 'nav.sos',
-        roles: ['admin', 'ops_manager', 'support', 'splizer', 'driver'],
+        roles: ROLE_PERMISSIONS.sos,
         icon: Siren,
       },
       {
         to: '/tasks',
         labelKey: 'nav.tasks',
-        roles: ['admin', 'ops_manager', 'support'],
+        roles: ROLE_PERMISSIONS.tasks,
         icon: Route,
       },
     ],
@@ -88,25 +91,25 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         to: '/bookings',
         labelKey: 'nav.bookings',
-        roles: ['admin', 'ops_manager', 'support', 'splizer'],
+        roles: ROLE_PERMISSIONS.bookings,
         icon: CalendarRange,
       },
       {
         to: '/clients',
         labelKey: 'nav.clients',
-        roles: ['admin', 'ops_manager', 'support', 'splizer', 'driver'],
+        roles: ROLE_PERMISSIONS.clients,
         icon: Users,
       },
       {
         to: '/edit-requests',
         labelKey: 'nav.editRequests',
-        roles: ['admin', 'ops_manager', 'support', 'splizer'],
+        roles: ROLE_PERMISSIONS.editRequests,
         icon: FilePenLine,
       },
       {
         to: '/vip',
         labelKey: 'nav.vip',
-        roles: ['admin', 'ops_manager', 'support', 'splizer'],
+        roles: ROLE_PERMISSIONS.vip,
         icon: Crown,
       },
     ],
@@ -118,25 +121,31 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         to: '/drivers',
         labelKey: 'nav.drivers',
-        roles: ['admin', 'ops_manager', 'support'],
+        roles: ['admin', 'ops_manager'] as StaffRole[],
+        icon: Car,
+      },
+      {
+        to: '/drivers',
+        labelKey: 'nav.driversTerminal',
+        roles: ['driver'] as StaffRole[],
         icon: Car,
       },
       {
         to: '/guides',
         labelKey: 'nav.guides',
-        roles: ['admin', 'ops_manager', 'support'],
+        roles: ROLE_PERMISSIONS.guides,
         icon: Compass,
       },
       {
         to: '/vendors',
         labelKey: 'nav.vendors',
-        roles: ['admin', 'ops_manager', 'support'],
+        roles: ROLE_PERMISSIONS.vendors,
         icon: Store,
       },
       {
         to: '/driver/me',
         labelKey: 'nav.mySchedule',
-        roles: ['driver'],
+        roles: ROLE_PERMISSIONS.driverMe,
         icon: CalendarCheck,
       },
     ],
@@ -148,25 +157,25 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         to: '/finance',
         labelKey: 'nav.finance',
-        roles: ['admin', 'ops_manager'],
+        roles: ROLE_PERMISSIONS.finance,
         icon: Wallet,
       },
       {
         to: '/payments',
         labelKey: 'nav.payments',
-        roles: ['admin', 'ops_manager', 'splizer'],
+        roles: ROLE_PERMISSIONS.payments,
         icon: CreditCard,
       },
       {
         to: '/packages',
         labelKey: 'nav.packages',
-        roles: ['admin', 'ops_manager'],
+        roles: ROLE_PERMISSIONS.packages,
         icon: Package,
       },
       {
         to: '/splizer',
         labelKey: 'nav.splizer',
-        roles: ['splizer'],
+        roles: ROLE_PERMISSIONS.splizer,
         icon: Split,
       },
     ],
@@ -178,25 +187,37 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         to: '/chat',
         labelKey: 'nav.chat',
-        roles: ['admin', 'ops_manager', 'support', 'splizer', 'driver'],
+        roles: ROLE_PERMISSIONS.teamChat,
         icon: MessageSquare,
       },
       {
         to: '/notifications',
         labelKey: 'nav.notifications',
-        roles: ['admin', 'ops_manager', 'support', 'splizer', 'driver'],
+        roles: ROLE_PERMISSIONS.notifications,
         icon: Bell,
+      },
+      {
+        to: '/ai-parser',
+        labelKey: 'nav.aiParser',
+        roles: ROLE_PERMISSIONS.aiFeatures,
+        icon: Sparkles,
+      },
+      {
+        to: '/russia-chatbot',
+        labelKey: 'nav.russiaChatbot',
+        roles: ROLE_PERMISSIONS.russiaChatbot,
+        icon: Languages,
       },
       {
         to: '/ai',
         labelKey: 'nav.ai',
-        roles: ['admin', 'ops_manager', 'support'],
+        roles: ROLE_PERMISSIONS.aiFeatures,
         icon: Bot,
       },
       {
         to: '/email',
         labelKey: 'nav.email',
-        roles: ['admin', 'ops_manager', 'support'],
+        roles: ROLE_PERMISSIONS.email,
         icon: Mail,
       },
     ],
@@ -208,19 +229,19 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         to: '/users',
         labelKey: 'nav.users',
-        roles: ['admin'],
+        roles: ROLE_PERMISSIONS.users,
         icon: UserCog,
       },
       {
         to: '/roles',
         labelKey: 'nav.roles',
-        roles: ['admin'],
+        roles: ROLE_PERMISSIONS.settings,
         icon: Shield,
       },
       {
         to: '/settings',
         labelKey: 'nav.settings',
-        roles: ['admin'],
+        roles: ROLE_PERMISSIONS.settings,
         icon: Settings,
       },
     ],

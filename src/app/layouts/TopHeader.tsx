@@ -22,7 +22,7 @@ export function TopHeader({
 }) {
   const { t } = useTranslation();
   const roleLabel = useRoleLabel();
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout, hasRole, homePath, can } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { locale, toggleLocale } = useLocale();
@@ -44,7 +44,7 @@ export function TopHeader({
     queryKey: ['clients', 'header-search', debounced],
     queryFn: ({ signal }) =>
       clientsApi.list({ page: 1, limit: 8, search: debounced }, signal),
-    enabled: debounced.trim().length >= 2,
+    enabled: can('clients') && debounced.trim().length >= 2,
   });
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export function TopHeader({
             <MenuIcon />
           </button>
         ) : null}
-        <Link to="/" className="flex min-w-0 items-center gap-2.5">
+        <Link to={homePath} className="flex min-w-0 items-center gap-2.5">
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-sm font-semibold text-white">
             Z
           </span>
@@ -85,6 +85,7 @@ export function TopHeader({
 
       <div className="mx-1 hidden h-8 w-px bg-[var(--shell-line)] lg:block" />
 
+      {can('clients') ? (
       <div ref={searchRef} className="relative min-w-0 flex-1">
         <div className="relative">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[var(--shell-muted)]">
@@ -143,6 +144,9 @@ export function TopHeader({
           </div>
         ) : null}
       </div>
+      ) : (
+        <div className="min-w-0 flex-1" />
+      )}
 
       <div className="flex shrink-0 items-center gap-1 md:gap-2">
         <IconButton

@@ -8,3 +8,5 @@ export * from './DataTable';
 export * from './NotificationPanel';
 export * from './ConfirmationModal';
 export * from './PageScaffold';
+export * from './TabBar';
+export * from './DetailDrawer';

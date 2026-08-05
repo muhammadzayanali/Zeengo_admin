@@ -1,168 +1,96 @@
-import { FormEvent, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { vipApi } from '../services/vip.api';
+import { useMemo, useState } from 'react';
+import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
 import {
   Button,
-  Card,
-  EmptyState,
-  ErrorState,
-  Input,
-  Label,
+  DetailDrawer,
   PageScaffold,
-  Skeleton,
-  StatsCard,
+  StatusBadge,
   useToast,
 } from '@/shared/ui';
-import { ApiClientError } from '@/shared/api/client';
-import { formatDate, formatMoney } from '@/shared/lib/cn';
 
 export function VipPage() {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const snap = useOpsSnapshot();
   const { push } = useToast();
-  const [activating, setActivating] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [id, setId] = useState<string | null>(null);
 
-  const overviewQuery = useQuery({
-    queryKey: ['vip', 'overview'],
-    queryFn: ({ signal }) => vipApi.overview(signal),
-  });
-
-  const requestsQuery = useQuery({
-    queryKey: ['vip', 'requests'],
-    queryFn: ({ signal }) => vipApi.requests(signal),
-  });
-
-  const clientsQuery = useQuery({
-    queryKey: ['vip', 'clients'],
-    queryFn: ({ signal }) => vipApi.clients(signal),
-  });
-
-  async function handleActivate(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setFormError(null);
-    const form = new FormData(e.currentTarget);
-    const bookingId = String(form.get('bookingId') || '');
-    if (!bookingId) return;
-    setActivating(true);
-    try {
-      await vipApi.activate(bookingId);
-      push({ tone: 'success', title: t('vip.activated') });
-      e.currentTarget.reset();
-      queryClient.invalidateQueries({ queryKey: ['vip'] });
-    } catch (error) {
-      setFormError(error instanceof ApiClientError ? error.message : t('somethingWrong'));
-    } finally {
-      setActivating(false);
-    }
-  }
+  const vips = useMemo(
+    () => snap.clients.filter((c) => c.isVip && c.status === 'active'),
+    [snap.clients],
+  );
+  const profile = id ? ops.getClient(id) : null;
 
   return (
     <PageScaffold
-      title={t('vip.title')}
-      description={t('vip.description')}
-      stats={
-        overviewQuery.isLoading ? (
-          <>
-            <Skeleton className="h-[92px] w-full rounded-[var(--radius)]" />
-            <Skeleton className="h-[92px] w-full rounded-[var(--radius)]" />
-            <Skeleton className="h-[92px] w-full rounded-[var(--radius)]" />
-          </>
-        ) : overviewQuery.data ? (
-          <>
-            <StatsCard
-              label={t('vip.vipBookings')}
-              value={overviewQuery.data.totalVipBookings}
-              tone="accent"
-            />
-            <StatsCard
-              label={t('vip.pendingUpgrades')}
-              value={overviewQuery.data.pendingUpgradeRequests}
-              tone="warning"
-            />
-            <StatsCard
-              label={t('vip.vipRevenue')}
-              value={formatMoney(overviewQuery.data.vipRevenue)}
-              tone="success"
-            />
-          </>
-        ) : undefined
-      }
+      title="Zeen Rafeq VIP"
+      description="Priority concierge desk — VIP clients bypass standard queues and escalate to senior ops."
     >
-      {overviewQuery.isError ? (
-        <ErrorState
-          description={t('vip.loadFailed')}
-          onRetry={() => overviewQuery.refetch()}
-        />
-      ) : null}
-
-      <Card>
-        <h2 className="text-lg font-bold">{t('vip.activate')}</h2>
-        <form onSubmit={handleActivate} className="mt-4 flex flex-wrap items-end gap-3">
-          <div>
-            <Label htmlFor="vipBookingId">{t('payments.bookingId')}</Label>
-            <Input id="vipBookingId" name="bookingId" required />
-          </div>
-          <Button type="submit" loading={activating}>
-            {t('vip.activate')}
-          </Button>
-        </form>
-        {formError ? <p className="mt-3 text-sm text-[var(--danger)]">{formError}</p> : null}
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="text-lg font-bold">{t('vip.upgradeRequests')}</h2>
-          <div className="mt-4 flex flex-col gap-3">
-            {requestsQuery.isLoading ? (
-              <Skeleton className="h-16" />
-            ) : !requestsQuery.data?.length ? (
-              <EmptyState title={t('vip.noRequests')} />
-            ) : (
-              requestsQuery.data.map((req) => (
-                <div key={req.id} className="rounded-xl border border-[var(--line)] p-3 text-sm">
-                  <p className="font-semibold">{req.znCode ?? req.bookingId}</p>
-                  {req.reason ? (
-                    <p className="mt-1 text-[var(--ink-muted)]">{req.reason}</p>
-                  ) : null}
+      <div className="space-y-3">
+        {vips.map((c) => {
+          const unassigned = !c.driverId;
+          return (
+            <div
+              key={c.id}
+              className={
+                unassigned
+                  ? 'rounded-[var(--radius)] border-2 border-[var(--danger)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]'
+                  : 'rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]'
+              }
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold">{c.fullName}</p>
+                    <StatusBadge tone="accent">VIP</StatusBadge>
+                    {unassigned ? <StatusBadge tone="danger">Unassigned</StatusBadge> : null}
+                  </div>
+                  <p className="text-sm text-[var(--ink-muted)]">
+                    {c.znCode} · {c.packageName} · {c.hotel}
+                  </p>
                   <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                    {formatDate(req.createdAt)}
+                    Special: {c.dietary || c.medicalNotes || 'Concierge preferences on file'}
                   </p>
                 </div>
-              ))
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="text-lg font-bold">{t('vip.vipClients')}</h2>
-          <div className="mt-4 flex flex-col gap-3">
-            {clientsQuery.isLoading ? (
-              <Skeleton className="h-16" />
-            ) : !clientsQuery.data?.length ? (
-              <EmptyState title={t('vip.noClients')} />
-            ) : (
-              clientsQuery.data.map((client) => (
-                <div
-                  key={client.bookingId}
-                  className="flex items-center justify-between rounded-xl border border-[var(--line)] p-3 text-sm"
-                >
-                  <div>
-                    <p className="font-semibold">
-                      {client.znCode} · {client.clientName}
-                    </p>
-                    <p className="text-[var(--ink-muted)]">
-                      {formatDate(client.vipActivatedAt)}
-                    </p>
-                  </div>
-                  <span className="font-semibold">{formatMoney(client.totalAmount)}</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setId(c.id)}>
+                    Concierge file
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      push({
+                        tone: 'success',
+                        title: 'Priority escalation sent to senior Ops Manager (demo)',
+                      })
+                    }
+                  >
+                    Escalate
+                  </Button>
                 </div>
-              ))
-            )}
-          </div>
-        </Card>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      <DetailDrawer open={Boolean(profile)} title="VIP concierge tracking" onClose={() => setId(null)}>
+        {profile ? (
+          <div className="space-y-3 text-sm">
+            <p className="font-medium">{profile.fullName} ({profile.znCode})</p>
+            <p>Security escort / luxury vehicle preferences tracked here.</p>
+            <p>Driver: {profile.driverId ? ops.getDriver(profile.driverId)?.name : 'Needs assign'}</p>
+            <p>Language: {profile.language}</p>
+            <p>Medical: {profile.medicalNotes || '—'}</p>
+            <p>Emergency: {profile.emergencyContact || '—'}</p>
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => push({ tone: 'success', title: 'Special request logged (demo)' })}
+            >
+              Log special request
+            </Button>
+          </div>
+        ) : null}
+      </DetailDrawer>
     </PageScaffold>
   );
 }
