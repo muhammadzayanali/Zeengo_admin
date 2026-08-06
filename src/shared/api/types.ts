@@ -201,7 +201,9 @@ export interface Task {
   priority: 'urgent' | 'normal';
   status: 'open' | 'done';
   bookingId: string | null;
+  znCode?: string | null;
   assigneeId: string | null;
+  assigneeName?: string | null;
   dueDate: string | null;
   createdAt: string;
 }
@@ -233,10 +235,16 @@ export interface EditRequest {
 export interface SosAlert {
   id: string;
   bookingId: string | null;
+  znCode?: string | null;
+  clientName?: string | null;
+  clientPhone?: string | null;
   message: string | null;
   status: 'active' | 'resolved';
   lat: number | null;
   lng: number | null;
+  resolvedBy?: string | null;
+  resolvedByName?: string | null;
+  resolvedAt?: string | null;
   createdAt: string;
 }
 
@@ -291,6 +299,7 @@ export interface ItineraryItem {
 export interface DailyOperationItem extends ItineraryItem {
   znCode: string;
   clientName: string;
+  driverName?: string | null;
 }
 
 export interface DailyOperationsDay {

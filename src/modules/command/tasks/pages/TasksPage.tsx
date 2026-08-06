@@ -159,11 +159,11 @@ export function TasksPage() {
                     {task.description ? (
                       <p className="mt-1 text-sm text-[var(--ink-muted)]">{task.description}</p>
                     ) : null}
-                    {task.dueDate ? (
-                      <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                        {t('tasks.dueDate')} {formatDate(task.dueDate)}
-                      </p>
-                    ) : null}
+                    <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                      {task.znCode ? `${task.znCode} · ` : ''}
+                      {task.assigneeName ? `Assignee ${task.assigneeName}` : 'Unassigned'}
+                      {task.dueDate ? ` · Due ${formatDate(task.dueDate)}` : ''}
+                    </p>
                   </div>
                   {task.status !== 'done' ? (
                     <Button variant="secondary" onClick={() => handleComplete(task.id)}>

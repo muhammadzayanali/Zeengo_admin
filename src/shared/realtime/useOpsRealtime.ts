@@ -41,10 +41,15 @@ export function useOpsRealtime() {
       invalidate(['dashboard']);
       push({ tone: 'error', title: 'New SOS alert' });
     });
+    ns.on('sos.resolved', () => {
+      invalidate(['sos']);
+      invalidate(['dashboard']);
+    });
     ns.on('message.new', () => invalidate(['chat']));
     ns.on('task.updated', () => {
       invalidate(['tasks']);
       invalidate(['dashboard']);
+      invalidate(['daily-operations']);
     });
     ns.on('booking.created', () => {
       invalidate(['bookings']);
