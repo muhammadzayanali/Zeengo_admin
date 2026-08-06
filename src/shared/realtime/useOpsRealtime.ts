@@ -46,6 +46,14 @@ export function useOpsRealtime() {
       invalidate(['tasks']);
       invalidate(['dashboard']);
     });
+    ns.on('booking.created', () => {
+      invalidate(['bookings']);
+      invalidate(['dashboard']);
+    });
+    ns.on('driver.updated', () => {
+      invalidate(['drivers']);
+      invalidate(['dashboard']);
+    });
     ns.on('notification.created', () => invalidate(['notifications']));
     ns.on('notification.new', () => invalidate(['notifications']));
 

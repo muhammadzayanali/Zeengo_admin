@@ -58,8 +58,51 @@ export interface DashboardSummary {
   driversInField: number;
   revenueToday: number;
   todaysItinerary: number;
+  itineraryProgress?: number;
   unassignedClients: number;
   opsQueue: number;
+  activeSos?: number;
+  pendingEdits?: number;
+}
+
+export interface UrgentAlert {
+  type: string;
+  severity: 'high' | 'medium' | 'low';
+  title: string;
+  message: string;
+  entityId: string | null;
+  createdAt: string;
+  znCode?: string | null;
+  clientName?: string | null;
+}
+
+export interface DashboardUnassignedClient {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  packageName: string | null;
+  arrivalDate: string | null;
+}
+
+export interface DashboardDriverCard {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  status: string;
+  vehicleMake: string | null;
+  vehicleModel: string | null;
+  plateNumber: string | null;
+  rating: number;
+  activeAssignmentZn: string | null;
+}
+
+export interface DashboardOverview {
+  summary: DashboardSummary;
+  alerts: UrgentAlert[];
+  unassigned: DashboardUnassignedClient[];
+  drivers: DashboardDriverCard[];
+  generatedAt: string;
+  cacheTtlSeconds: number;
 }
 
 export interface Booking {
@@ -284,15 +327,6 @@ export interface BookingStats {
   completed: number;
   cancelled: number;
   revenueTotal: number;
-}
-
-export interface UrgentAlert {
-  type: string;
-  severity: 'high' | 'medium' | 'low';
-  title: string;
-  message: string;
-  entityId: string | null;
-  createdAt: string;
 }
 
 export interface EodReport {
