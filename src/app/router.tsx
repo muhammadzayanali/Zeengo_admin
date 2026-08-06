@@ -32,6 +32,16 @@ const ClientsPage = lazy(() =>
     default: m.ClientsPage,
   })),
 );
+const NewClientPage = lazy(() =>
+  import('@/modules/clients/pages/NewClientPage').then((m) => ({
+    default: m.NewClientPage,
+  })),
+);
+const ClientDetailPage = lazy(() =>
+  import('@/modules/clients/pages/ClientDetailPage').then((m) => ({
+    default: m.ClientDetailPage,
+  })),
+);
 const PaymentsPage = lazy(() =>
   import('@/modules/finance/payments/pages/PaymentsPage').then((m) => ({
     default: m.PaymentsPage,
@@ -191,6 +201,22 @@ export function AppRouter() {
             element={
               <L>
                 <ClientsPage />
+              </L>
+            }
+          />
+          <Route
+            path="/clients/new"
+            element={
+              <L>
+                <NewClientPage />
+              </L>
+            }
+          />
+          <Route
+            path="/clients/:id"
+            element={
+              <L>
+                <ClientDetailPage />
               </L>
             }
           />
