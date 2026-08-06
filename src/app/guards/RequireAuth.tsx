@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 import type { StaffRole } from '@/shared/api/types';
-import { canAccessPath, homeForRole } from '@/features/auth/permissions';
+import { canAccessPath, homeForRole } from '@/modules/auth/permissions';
 import { Spinner } from '@/shared/ui';
 
 export function RequireAuth({

@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { getAccessToken } from '@/shared/api/client';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { useToast } from '@/shared/ui';
 
 export function useOpsRealtime() {

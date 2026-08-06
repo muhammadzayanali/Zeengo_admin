@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { clientsApi } from '@/features/clients/services/clients.api';
-import { notificationsApi } from '@/features/notifications/services/notifications.api';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
+import { clientsApi } from '@/modules/clients/services/clients.api';
+import { notificationsApi } from '@/modules/tools/notifications/services/notifications.api';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { useTranslation } from 'react-i18next';
 import {

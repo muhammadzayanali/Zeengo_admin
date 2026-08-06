@@ -4,12 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-import { homeForRole } from '@/features/auth/permissions';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
+import { homeForRole } from '@/modules/auth/permissions';
 import {
   loginSchema,
   type LoginFormValues,
-} from '@/features/auth/validation/login.schema';
+} from '@/modules/auth/validation/login.schema';
 import { ApiClientError } from '@/shared/api/client';
 import { useLocale } from '@/shared/hooks/useShellPrefs';
 import { Button, FieldError, Input, Label, useToast } from '@/shared/ui';

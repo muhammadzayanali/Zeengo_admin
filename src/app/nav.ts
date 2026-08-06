@@ -27,7 +27,7 @@ import {
   Languages,
 } from 'lucide-react';
 import type { StaffRole } from '@/shared/api/types';
-import { ROLE_PERMISSIONS } from '@/features/auth/permissions';
+import { ROLE_PERMISSIONS } from '@/modules/auth/permissions';
 
 export type NavItem = {
   to: string;

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { bookingsApi } from '../services/bookings.api';
-import { packagesApi } from '@/features/packages/services/packages.api';
+import { packagesApi } from '@/modules/finance/packages/services/packages.api';
 import {
   Button,
   DialogShell,

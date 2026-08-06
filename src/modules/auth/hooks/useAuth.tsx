@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { authApi } from '@/features/auth/services/auth.api';
+import { authApi } from '@/modules/auth/services/auth.api';
 import {
   clearTokens,
   getAccessToken,
@@ -23,7 +23,7 @@ import {
   normalizeStaffRole,
   ROLE_PERMISSIONS,
   type PermissionKey,
-} from '@/features/auth/permissions';
+} from '@/modules/auth/permissions';
 
 interface AuthContextValue {
   user: StaffUser | null;
@@ -48,6 +48,7 @@ function withNormalizedRole(user: StaffUser | null): StaffUser | null {
   return { ...user, role };
 }
 
+/** Staff auth: always uses Nest API (no static client demo login). */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [token, setToken] = useState(() => getAccessToken());
@@ -61,8 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     enabled: Boolean(token),
     retry: false,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 60_000,
   });
 
   const login = useCallback(

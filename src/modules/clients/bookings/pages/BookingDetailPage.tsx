@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { bookingsApi } from '../services/bookings.api';
-import { itinerariesApi } from '@/features/itineraries/services/itineraries.api';
+import { itinerariesApi } from '@/modules/command/itineraries/services/itineraries.api';
 import {
   Badge,
   Button,

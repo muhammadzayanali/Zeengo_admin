@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { MapPin, Phone, Users } from 'lucide-react';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
 import type { OpsDriverStatus } from '@/ops-demo/store';
 import {
