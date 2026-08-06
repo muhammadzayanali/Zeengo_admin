@@ -117,7 +117,7 @@ export function BookingDetailPage() {
       title={b.znCode}
       description={`${b.client?.fullName ?? t('common.client')} · ${formatDate(b.arrivalDate)} → ${formatDate(b.departureDate)}`}
       primaryAction={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Badge
               tone={
                 b.status === 'active'
@@ -127,7 +127,13 @@ export function BookingDetailPage() {
                     : 'default'
               }
             >
-              {b.status}
+              {b.status === 'active'
+                ? 'Active'
+                : b.status === 'cancelled'
+                  ? 'Cancelled'
+                  : b.status === 'completed'
+                    ? 'Completed'
+                    : b.status}
             </Badge>
             {b.isVip ? <Badge tone="accent">VIP</Badge> : null}
             <Link to="/bookings">

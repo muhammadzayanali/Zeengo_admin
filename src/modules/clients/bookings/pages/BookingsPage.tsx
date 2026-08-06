@@ -45,11 +45,22 @@ export function BookingsPage() {
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
 
+  const [packageId, setPackageId] = useState('');
+  const [partySize, setPartySize] = useState(1);
+  const [totalAmount, setTotalAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
   const bookingsQuery = useQuery({
     queryKey: ['bookings', { page, search: debouncedSearch, status }],
     queryFn: ({ signal }) =>
       bookingsApi.list(
-        { page, limit: 20, search: debouncedSearch || undefined, status: status || undefined },
+        {
+          page,
+          limit: 20,
+          search: debouncedSearch || undefined,
+          status: status || undefined,
+        },
         signal,
       ),
   });
@@ -58,10 +69,56 @@ export function BookingsPage() {
     queryKey: ['packages'],
     queryFn: ({ signal }) => packagesApi.list(signal),
     enabled: createOpen,
+    staleTime: 60_000,
   });
 
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const packages = packagesQuery.data ?? [];
+
+  const selectedPackage = useMemo(
+    () => packages.find((p) => p.id === packageId) ?? null,
+    [packages, packageId],
+  );
+
+  function resetCreateForm() {
+    setPackageId('');
+    setPartySize(1);
+    setTotalAmount('');
+    setFormError(null);
+    setSubmitting(false);
+  }
+
+  function handleOpenCreate() {
+    resetCreateForm();
+    setCreateOpen(true);
+  }
+
+  function handleCloseCreate() {
+    setCreateOpen(false);
+    resetCreateForm();
+  }
+
+  function applyPackagePrice(nextPackageId: string, nextParty: number) {
+    const pkg = packages.find((p) => p.id === nextPackageId);
+    if (!pkg) {
+      setTotalAmount('');
+      return;
+    }
+    const unit = Number(pkg.pricePerPerson) || 0;
+    const size = Math.max(1, nextParty || 1);
+    // pricePerPerson × partySize is the sensible default; staff can still override.
+    setTotalAmount(String(Number((unit * size).toFixed(2))));
+  }
+
+  function handlePackageChange(id: string) {
+    setPackageId(id);
+    applyPackagePrice(id, partySize);
+  }
+
+  function handlePartySizeChange(value: number) {
+    const size = Math.max(1, value || 1);
+    setPartySize(size);
+    if (packageId) applyPackagePrice(packageId, size);
+  }
 
   const pageStats = useMemo(() => {
     const rows = bookingsQuery.data?.data ?? [];
@@ -76,27 +133,65 @@ export function BookingsPage() {
     e.preventDefault();
     setFormError(null);
     const form = new FormData(e.currentTarget);
+
+    const fullName = String(form.get('fullName') || '').trim();
+    const phone = String(form.get('phone') || '').trim();
+    const arrivalDate = String(form.get('arrivalDate') || '');
+    const departureDate = String(form.get('departureDate') || '');
+
+    if (!fullName || !phone) {
+      setFormError('Client name and phone are required.');
+      return;
+    }
+    if (!packageId) {
+      setFormError('Please select a package.');
+      return;
+    }
+    if (!arrivalDate || !departureDate) {
+      setFormError('Arrival and departure dates are required.');
+      return;
+    }
+    if (departureDate < arrivalDate) {
+      setFormError('Departure must be on or after arrival.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await bookingsApi.create({
+      const booking = await bookingsApi.create({
         client: {
-          fullName: String(form.get('fullName') || ''),
-          phone: String(form.get('phone') || ''),
-          email: String(form.get('email') || '') || undefined,
-          nationality: String(form.get('nationality') || '') || undefined,
+          fullName,
+          phone,
+          email: String(form.get('email') || '').trim() || undefined,
+          nationality: String(form.get('nationality') || '').trim() || undefined,
         },
-        packageId: String(form.get('packageId') || ''),
-        partySize: Number(form.get('partySize') || 1),
-        arrivalDate: String(form.get('arrivalDate') || ''),
-        departureDate: String(form.get('departureDate') || ''),
-        totalAmount: Number(form.get('totalAmount') || 0),
-        internalNotes: String(form.get('internalNotes') || '') || undefined,
+        packageId,
+        partySize: Math.max(1, Number(partySize) || 1),
+        arrivalDate,
+        departureDate,
+        totalAmount: Number(totalAmount || 0),
+        internalNotes: String(form.get('internalNotes') || '').trim() || undefined,
       });
-      push({ tone: 'success', title: t('bookings.createSuccess') });
-      setCreateOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+
+      push({
+        tone: 'success',
+        title: t('bookings.createSuccess'),
+        description: booking.znCode ? `Code ${booking.znCode}` : undefined,
+      });
+
+      handleCloseCreate();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bookings'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['clients'] }),
+      ]);
+      navigate(`/bookings/${booking.id}`);
     } catch (error) {
-      setFormError(error instanceof ApiClientError ? error.message : t('bookings.createFailed'));
+      setFormError(
+        error instanceof ApiClientError
+          ? error.message
+          : t('bookings.createFailed'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -106,12 +201,18 @@ export function BookingsPage() {
     <PageScaffold
       title={t('bookings.title')}
       description={t('bookings.description')}
-      primaryAction={<Button onClick={() => setCreateOpen(true)}>{t('bookings.newBooking')}</Button>}
+      primaryAction={
+        <Button onClick={handleOpenCreate}>{t('bookings.newBooking')}</Button>
+      }
       stats={
         bookingsQuery.data ? (
           <>
             <StatsCard label={t('bookings.total')} value={pageStats.total} />
-            <StatsCard label={t('common.active')} value={pageStats.active} tone="success" />
+            <StatsCard
+              label={t('common.active')}
+              value={pageStats.active}
+              tone="success"
+            />
             <StatsCard label="VIP" value={pageStats.vip} tone="accent" />
           </>
         ) : undefined
@@ -155,7 +256,13 @@ export function BookingsPage() {
           onRetry={() => bookingsQuery.refetch()}
         />
       ) : !bookingsQuery.data?.data.length ? (
-        <EmptyState title={t('bookings.empty')} description={t('bookings.emptyHint')} />
+        <EmptyState
+          title={t('bookings.empty')}
+          description={t('bookings.emptyHint')}
+          action={
+            <Button onClick={handleOpenCreate}>{t('bookings.newBooking')}</Button>
+          }
+        />
       ) : (
         <>
           <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
@@ -180,15 +287,20 @@ export function BookingsPage() {
                     <td className="px-4 py-3 font-semibold">{booking.znCode}</td>
                     <td className="px-4 py-3">
                       {booking.client?.fullName}
-                      {booking.isVip ? <StatusBadge tone="accent"> VIP</StatusBadge> : null}
+                      {booking.isVip ? (
+                        <StatusBadge tone="accent"> VIP</StatusBadge>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-[var(--ink-muted)]">
-                      {formatDate(booking.arrivalDate)} – {formatDate(booking.departureDate)}
+                      {formatDate(booking.arrivalDate)} –{' '}
+                      {formatDate(booking.departureDate)}
                     </td>
                     <td className="px-4 py-3">{formatMoney(booking.totalAmount)}</td>
                     <td className="px-4 py-3">{formatMoney(booking.dueAmount)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge tone={STATUS_TONE[booking.status]}>{booking.status}</StatusBadge>
+                      <StatusBadge tone={STATUS_TONE[booking.status]}>
+                        {booking.status}
+                      </StatusBadge>
                     </td>
                   </tr>
                 ))}
@@ -209,21 +321,27 @@ export function BookingsPage() {
       <DialogShell
         open={createOpen}
         title={t('bookings.newBooking')}
-        onClose={() => setCreateOpen(false)}
+        onClose={handleCloseCreate}
         wide
       >
         <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="fullName">{t('bookings.clientName')}</Label>
-            <Input id="fullName" name="fullName" required />
+            <Input id="fullName" name="fullName" required autoComplete="name" />
           </div>
           <div>
             <Label htmlFor="phone">{t('common.phone')}</Label>
-            <Input id="phone" name="phone" required />
+            <Input
+              id="phone"
+              name="phone"
+              required
+              autoComplete="tel"
+              placeholder="+966 5..."
+            />
           </div>
           <div>
             <Label htmlFor="email">{t('common.email')}</Label>
-            <Input id="email" name="email" type="email" />
+            <Input id="email" name="email" type="email" autoComplete="email" />
           </div>
           <div>
             <Label htmlFor="nationality">{t('bookings.nationality')}</Label>
@@ -231,20 +349,50 @@ export function BookingsPage() {
           </div>
           <div>
             <Label htmlFor="packageId">{t('bookings.package')}</Label>
-            <Select id="packageId" name="packageId" required defaultValue="">
-              <option value="" disabled>
-                {packagesQuery.isLoading ? t('loading') : t('bookings.selectPackage')}
-              </option>
-              {packagesQuery.data?.map((pkg) => (
-                <option key={pkg.id} value={pkg.id}>
-                  {pkg.name}
+            {packagesQuery.isLoading ? (
+              <Skeleton className="h-11 w-full" />
+            ) : packagesQuery.isError ? (
+              <p className="text-sm text-[var(--danger)]">
+                Could not load packages. Check API / seed data.
+              </p>
+            ) : (
+              <Select
+                id="packageId"
+                name="packageId"
+                required
+                value={packageId}
+                onChange={(e) => handlePackageChange(e.target.value)}
+              >
+                <option value="" disabled>
+                  {t('bookings.selectPackage')}
                 </option>
-              ))}
-            </Select>
+                {packages.map((pkg) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.name} · {formatMoney(Number(pkg.pricePerPerson))}/person
+                  </option>
+                ))}
+              </Select>
+            )}
+            {selectedPackage ? (
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                Min party {selectedPackage.minPersons}
+                {selectedPackage.durationDays
+                  ? ` · ${selectedPackage.durationDays} days`
+                  : ''}
+              </p>
+            ) : null}
           </div>
           <div>
             <Label htmlFor="partySize">{t('bookings.partySize')}</Label>
-            <Input id="partySize" name="partySize" type="number" min={1} defaultValue={1} required />
+            <Input
+              id="partySize"
+              name="partySize"
+              type="number"
+              min={1}
+              required
+              value={partySize}
+              onChange={(e) => handlePartySizeChange(Number(e.target.value))}
+            />
           </div>
           <div>
             <Label htmlFor="arrivalDate">{t('bookings.arrival')}</Label>
@@ -254,9 +402,22 @@ export function BookingsPage() {
             <Label htmlFor="departureDate">{t('bookings.departure')}</Label>
             <Input id="departureDate" name="departureDate" type="date" required />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <Label htmlFor="totalAmount">{t('bookings.totalAmount')}</Label>
-            <Input id="totalAmount" name="totalAmount" type="number" min={0} step="0.01" required />
+            <Input
+              id="totalAmount"
+              name="totalAmount"
+              type="number"
+              min={0}
+              step="0.01"
+              required
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              placeholder="0.00"
+            />
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">
+              Defaults to package price × party size. You can override before create.
+            </p>
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="internalNotes">{t('bookings.notes')}</Label>
@@ -266,10 +427,10 @@ export function BookingsPage() {
             <p className="sm:col-span-2 text-sm text-[var(--danger)]">{formError}</p>
           ) : null}
           <div className="sm:col-span-2 flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
+            <Button type="button" variant="secondary" onClick={handleCloseCreate}>
               {t('cancel')}
             </Button>
-            <Button type="submit" loading={submitting}>
+            <Button type="submit" loading={submitting} disabled={!packages.length}>
               {t('bookings.createBooking')}
             </Button>
           </div>

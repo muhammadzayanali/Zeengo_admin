@@ -134,9 +134,11 @@ export function Card({
 export function Badge({
   children,
   tone = 'default',
+  className,
 }: {
   children: ReactNode;
   tone?: 'default' | 'success' | 'warning' | 'danger' | 'accent';
+  className?: string;
 }) {
   const tones = {
     default: 'bg-[var(--bg-muted)] text-[var(--ink-muted)]',
@@ -148,8 +150,9 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
+        'inline-flex max-w-full items-center justify-center rounded-full px-3 py-1 text-xs font-semibold leading-none tracking-normal whitespace-nowrap',
         tones[tone],
+        className,
       )}
     >
       {children}
