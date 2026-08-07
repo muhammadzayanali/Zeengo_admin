@@ -473,6 +473,10 @@ export interface VipOverview {
   totalVipBookings: number;
   pendingUpgradeRequests: number;
   vipRevenue: number;
+  vipPrice: number;
+  hotline: string;
+  slaMinutes: number;
+  inclusions: string[];
 }
 
 export interface VipClient {
@@ -480,9 +484,44 @@ export interface VipClient {
   znCode: string;
   clientId: string;
   clientName: string;
+  clientPhone?: string | null;
+  packageName?: string | null;
+  hotelName?: string | null;
+  specialNotes?: string | null;
   isVip: boolean;
+  isAssigned?: boolean;
+  driverName?: string | null;
   vipActivatedAt: string | null;
   totalAmount: number;
+  status?: string;
+  arrivalDate?: string | null;
+  departureDate?: string | null;
+  preferredLang?: string | null;
+}
+
+export interface VipCandidate {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  packageName: string | null;
+  totalAmount: number;
+}
+
+export interface VipClientFile extends VipClient {
+  notes: Array<{
+    id: string;
+    body: string;
+    authorName: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface VipEscalateResult {
+  bookingId: string;
+  znCode: string;
+  taskId: string | null;
+  conversationId: string | null;
+  notified: boolean;
 }
 
 export interface Setting {
