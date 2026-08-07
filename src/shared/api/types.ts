@@ -224,11 +224,20 @@ export interface EditRequest {
   id: string;
   bookingId: string;
   znCode?: string | null;
+  clientName?: string | null;
+  clientPhone?: string | null;
   type: string;
   status: 'pending' | 'approved' | 'rejected';
   originalValue: string | null;
   requestedValue: string | null;
   reason: string | null;
+  reviewNotes?: string | null;
+  reviewedBy?: string | null;
+  reviewedByName?: string | null;
+  reviewedAt?: string | null;
+  targetDate?: string | null;
+  arrivalDate?: string | null;
+  departureDate?: string | null;
   createdAt: string;
 }
 

@@ -61,6 +61,14 @@ export function useOpsRealtime() {
     });
     ns.on('notification.created', () => invalidate(['notifications']));
     ns.on('notification.new', () => invalidate(['notifications']));
+    ns.on('edit_request.created', () => {
+      invalidate(['edit-requests']);
+      invalidate(['dashboard']);
+    });
+    ns.on('edit_request.updated', () => {
+      invalidate(['edit-requests']);
+      invalidate(['dashboard']);
+    });
 
     return () => {
       ns.disconnect();
