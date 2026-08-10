@@ -397,8 +397,58 @@ const en = {
     tabOverview: 'Overview',
     tabRequests: 'Requests',
     tabClients: 'VIP Clients',
-    packageTitle: 'Zeen Rafeq concierge package',
+    packageTitle: 'Zeen Rafeq VIP',
     packagePrice: '{{price}} per trip — white-glove operations',
+    premiumLabel: 'Premium concierge service',
+    packageIntro:
+      'The ultimate travel companion add-on for ZEENGO clients. A dedicated 24/7 personal concierge handles every detail — from restaurant bookings to emergency assistance.',
+    metricPrice: 'Per trip',
+    metricServices: 'Included',
+    metricAvail: 'Availability',
+    services: 'services',
+    whatsIncluded: "What's included",
+    whatsIncludedHint:
+      'What staff and guests get with Zeen Rafeq — each item is an operational promise, not a marketing slogan.',
+    features: {
+      concierge: {
+        title: '24/7 Personal Concierge',
+        desc: 'Dedicated operations agent reachable any time — day or night.',
+      },
+      driver: {
+        title: 'Priority Driver Assignment',
+        desc: 'Best available driver assigned first. Guaranteed on-time pickup.',
+      },
+      dining: {
+        title: 'Table Reservations Handled',
+        desc: 'We call and reserve tables at top halal restaurants on your behalf.',
+      },
+      events: {
+        title: 'Event & Ticket Booking',
+        desc: 'Bolshoi, Mariinsky, circus — we book the best seats for you.',
+      },
+      translation: {
+        title: 'Live Translation Support',
+        desc: 'Phone interpreter available for any Russian communication needed.',
+      },
+      shopping: {
+        title: 'Shopping Assistance',
+        desc: 'Personal shopper escort for GUM, TsUM, and luxury boutiques.',
+      },
+      medical: {
+        title: 'Medical Emergency Coordination',
+        desc: 'Immediate liaison with English/Arabic-speaking medical services.',
+      },
+      airport: {
+        title: 'Airport Fast-Track',
+        desc: 'VIP terminal access, meet-and-greet, and luggage handling.',
+      },
+    },
+    opsLine: 'Zeen Rafeq Ops Line',
+    whatsappHotline: 'WhatsApp hotline',
+    responseSla: 'Response SLA',
+    slaUnder: 'Under {{minutes}} minutes',
+    languages: 'Languages',
+    languageList: 'Arabic · English · Russian',
     sla: 'Guaranteed response under {{minutes}} minutes',
     conciergeFile: 'Concierge file',
     escalate: 'Escalate',

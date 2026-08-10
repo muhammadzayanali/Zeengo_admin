@@ -2,6 +2,19 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import {
+  Check,
+  Clock,
+  Car,
+  UtensilsCrossed,
+  Theater,
+  Globe2,
+  ShoppingBag,
+  Ambulance,
+  Plane,
+  Phone,
+  type LucideIcon,
+} from 'lucide-react';
 import { vipApi, vipKeys } from '../services/vip.api';
 import { editRequestsApi } from '@/modules/clients/edit-requests/services/edit-requests.api';
 import {
@@ -25,6 +38,18 @@ import { formatDate, formatMoney } from '@/shared/lib/cn';
 import type { VipClient } from '@/shared/api/types';
 
 type VipTab = 'overview' | 'requests' | 'clients';
+
+/** What's Included — full title + explanation (icon keyed). */
+const VIP_FEATURES: Array<{ id: string; icon: LucideIcon }> = [
+  { id: 'concierge', icon: Clock },
+  { id: 'driver', icon: Car },
+  { id: 'dining', icon: UtensilsCrossed },
+  { id: 'events', icon: Theater },
+  { id: 'translation', icon: Globe2 },
+  { id: 'shopping', icon: ShoppingBag },
+  { id: 'medical', icon: Ambulance },
+  { id: 'airport', icon: Plane },
+];
 
 export function VipPage() {
   const { t } = useTranslation();
@@ -448,33 +473,110 @@ function OverviewPanel({
         />
       </div>
 
+      {/* Hero / package strip */}
       <section className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--ink)]">
+          <div className="max-w-2xl">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+              {t('vip.premiumLabel')}
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--ink)]">
               {t('vip.packageTitle')}
             </h2>
-            <p className="mt-1 text-sm text-[var(--ink-muted)]">
-              {t('vip.packagePrice', { price: formatMoney(overview.vipPrice) })}
+            <p className="mt-2 text-sm leading-relaxed text-[var(--ink-muted)]">
+              {t('vip.packageIntro')}
             </p>
           </div>
-          <div className="text-end text-sm">
-            <p className="font-semibold text-[var(--accent)]">{overview.hotline}</p>
-            <p className="text-xs text-[var(--ink-muted)]">
-              {t('vip.sla', { minutes: overview.slaMinutes })}
-            </p>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div>
+              <p className="text-xs text-[var(--ink-muted)]">{t('vip.metricPrice')}</p>
+              <p className="font-semibold text-[var(--ink)]">
+                {formatMoney(overview.vipPrice)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--ink-muted)]">{t('vip.metricServices')}</p>
+              <p className="font-semibold text-[var(--ink)]">
+                {VIP_FEATURES.length} {t('vip.services')}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--ink-muted)]">{t('vip.metricAvail')}</p>
+              <p className="font-semibold text-[var(--ink)]">24/7</p>
+            </div>
           </div>
         </div>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {overview.inclusions.map((item) => (
+      </section>
+
+      {/* What's Included — full explanations */}
+      <section className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
+        <h3 className="text-base font-semibold text-[var(--ink)]">
+          {t('vip.whatsIncluded')}
+        </h3>
+        <p className="mt-1 text-sm text-[var(--ink-muted)]">
+          {t('vip.whatsIncludedHint')}
+        </p>
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          {VIP_FEATURES.map(({ id, icon: Icon }) => (
             <li
-              key={item}
-              className="rounded-xl bg-[var(--bg-muted)] px-3 py-2 text-sm text-[var(--ink)]"
+              key={id}
+              className="flex gap-3 rounded-xl border border-[var(--line)] bg-[var(--bg-muted)]/60 p-3.5"
             >
-              {item}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-elevated)] text-[var(--accent)] shadow-sm">
+                <Icon className="h-5 w-5" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="flex items-start gap-1.5 text-sm font-semibold text-[var(--ink)]">
+                  <Check
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[var(--success)]"
+                    aria-hidden
+                  />
+                  <span>{t(`vip.features.${id}.title`)}</span>
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--ink-muted)]">
+                  {t(`vip.features.${id}.desc`)}
+                </p>
+              </div>
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Ops line */}
+      <section className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
+        <div className="flex items-center gap-2">
+          <Phone className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+          <h3 className="text-base font-semibold text-[var(--ink)]">
+            {t('vip.opsLine')}
+          </h3>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+              {t('vip.whatsappHotline')}
+            </p>
+            <p className="mt-1 font-semibold text-[var(--accent)]">
+              {overview.hotline}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+              {t('vip.responseSla')}
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 font-semibold text-[var(--ink)]">
+              <Clock className="h-4 w-4 text-[var(--success)]" aria-hidden />
+              {t('vip.slaUnder', { minutes: overview.slaMinutes })}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+              {t('vip.languages')}
+            </p>
+            <p className="mt-1 font-semibold text-[var(--ink)]">
+              {t('vip.languageList')}
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   );
