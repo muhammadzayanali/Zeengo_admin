@@ -420,6 +420,7 @@ export interface DriverListItem {
   plateNumber: string | null;
   whatsapp: string | null;
   rating: string;
+  reviewsCount: number;
   tripsCount: number;
   status: DriverDutyStatus | string;
   lastLat: number | null;
@@ -491,6 +492,27 @@ export interface LivePosition {
 export interface DriverSchedule {
   date: string;
   items: DailyOperationItem[];
+}
+
+export interface DriverReview {
+  id: string;
+  bookingId: string;
+  znCode: string;
+  clientId: string;
+  clientName: string;
+  driverId: string;
+  driverName: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DriverReviewsStats {
+  driverId: string | null;
+  average: number;
+  reviewsCount: number;
+  breakdown: Record<1 | 2 | 3 | 4 | 5, number>;
 }
 
 export interface VendorFinance {

@@ -10,6 +10,8 @@ import {
   DialogShell,
   EmptyState,
   ErrorState,
+  Input,
+  Label,
   PageScaffold,
   SearchBar,
   Select,
@@ -24,6 +26,7 @@ import type {
   DriverDetail,
   DriverDutyStatus,
   DriverListItem,
+  DriverReview,
   UnassignedBooking,
 } from '@/shared/api/types';
 
@@ -45,6 +48,49 @@ function dutyTone(status: string): StatusTone {
 
 function vehicleLabel(d: Pick<DriverListItem, 'vehicleMake' | 'vehicleModel' | 'vehicleColor'>) {
   return [d.vehicleColor, d.vehicleMake, d.vehicleModel].filter(Boolean).join(' ') || '—';
+}
+
+function stars(rating: number) {
+  const n = Math.max(0, Math.min(5, Math.round(rating)));
+  return `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
+}
+
+function formatReviewDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function ReviewsList({ items, empty }: { items: DriverReview[]; empty: string }) {
+  if (!items.length) {
+    return <p className="mt-1 text-sm text-[var(--ink-muted)]">{empty}</p>;
+  }
+  return (
+    <ul className="mt-2 space-y-2">
+      {items.map((review) => (
+        <li
+          key={review.id}
+          className="rounded-lg border border-[var(--line)] px-3 py-2"
+        >
+          <p className="text-sm font-medium">
+            {stars(review.rating)}{' '}
+            <span className="text-[var(--ink-muted)]">
+              {review.clientName}
+              {review.znCode ? ` · ${review.znCode}` : ''}
+            </span>
+          </p>
+          {review.comment ? (
+            <p className="mt-1 text-sm">{review.comment}</p>
+          ) : null}
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">
+            {formatReviewDate(review.createdAt)}
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function todayIso() {
@@ -105,6 +151,14 @@ function DriversRoster() {
     queryFn: ({ signal }) => driversApi.schedule(selectedId!, 'today', signal),
     enabled: Boolean(selectedId),
     staleTime: 10_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: driverKeys.reviews(selectedId ?? ''),
+    queryFn: ({ signal }) => driversApi.reviews(selectedId!, signal),
+    enabled: Boolean(selectedId),
+    staleTime: 20_000,
     refetchOnWindowFocus: false,
   });
 
@@ -260,7 +314,7 @@ function DriversRoster() {
                   </StatusBadge>
                 </div>
                 <p className="mt-2 text-xs text-[var(--ink-muted)]">
-                  ★ {d.rating} · {d.tripsCount} {t('drivers.trips')}
+                  ★ {d.rating} ({d.reviewsCount ?? 0}) · {d.tripsCount} {t('drivers.trips')}
                 </p>
                 {d.activeAssignment?.znCode ? (
                   <p className="mt-1 text-xs font-medium text-[var(--success)]">
@@ -314,6 +368,7 @@ function DriversRoster() {
               <DriverWorkspace
                 driver={detailQuery.data}
                 scheduleItems={scheduleQuery.data?.items ?? []}
+                reviews={reviewsQuery.data?.data ?? []}
               />
             )}
           </aside>
@@ -385,6 +440,7 @@ function DriversRoster() {
 function DriverWorkspace({
   driver,
   scheduleItems,
+  reviews,
 }: {
   driver: DriverDetail;
   scheduleItems: Array<{
@@ -396,6 +452,7 @@ function DriverWorkspace({
     clientName?: string;
     status: string;
   }>;
+  reviews: DriverReview[];
 }) {
   const { t } = useTranslation();
   const assignment = driver.activeAssignment ?? driver.assignments?.[0] ?? null;
@@ -406,6 +463,12 @@ function DriverWorkspace({
         <p className="text-lg font-semibold">{driver.user.fullName}</p>
         <p className="text-[var(--ink-muted)]">
           {vehicleLabel(driver)} · {driver.plateNumber || '—'}
+        </p>
+        <p className="mt-1 text-sm">
+          ★ {driver.rating}{' '}
+          <span className="text-[var(--ink-muted)]">
+            ({t('drivers.reviewsCount', { count: driver.reviewsCount ?? 0 })})
+          </span>
         </p>
         {driver.user.phone ? (
           <a className="mt-1 inline-flex items-center gap-1 text-[var(--accent)]" href={`tel:${driver.user.phone}`}>
@@ -463,6 +526,13 @@ function DriverWorkspace({
           </ul>
         )}
       </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase text-[var(--ink-muted)]">
+          {t('drivers.reviews')}
+        </p>
+        <ReviewsList items={reviews} empty={t('drivers.noReviewsHint')} />
+      </div>
     </div>
   );
 }
@@ -485,6 +555,34 @@ function DriversTerminal() {
     queryFn: ({ signal }) => driversApi.mySchedule('today', signal),
     staleTime: 10_000,
     refetchOnWindowFocus: false,
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: driverKeys.myReviews(),
+    queryFn: ({ signal }) => driversApi.myReviews(signal),
+    staleTime: 20_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const vehicleMutation = useMutation({
+    mutationFn: (data: {
+      vehicleMake: string;
+      vehicleModel: string;
+      vehicleColor?: string;
+      vehicleYear?: number;
+      plateNumber: string;
+      whatsapp?: string;
+    }) => driversApi.updateMyVehicle(data),
+    onSuccess: async () => {
+      push({ tone: 'success', title: t('drivers.vehicleSaved') });
+      await qc.invalidateQueries({ queryKey: driverKeys.all });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('drivers.vehicleSaveFailed'),
+      });
+    },
   });
 
   const statusMutation = useMutation({
@@ -572,7 +670,7 @@ function DriversTerminal() {
           <StatsCard label={t('drivers.trips')} value={me.tripsCount} />
           <StatsCard
             label={t('drivers.rating')}
-            value={me.rating}
+            value={`${me.rating} (${me.reviewsCount ?? 0})`}
           />
         </>
       }
@@ -648,18 +746,12 @@ function DriversTerminal() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-              {t('drivers.vehicle')}
-            </p>
-            <p className="mt-1 text-lg font-semibold">{vehicleLabel(me)}</p>
-            <p className="text-sm text-[var(--ink-muted)]">
-              {t('drivers.plate')} {me.plateNumber || '—'}
-            </p>
-            <p className="mt-2 text-sm">
-              {t('roles.driver')} · {me.user.fullName}
-            </p>
-          </div>
+          <DriverVehicleForm
+            key={me.updatedAt}
+            driver={me}
+            saving={vehicleMutation.isPending}
+            onSave={(data) => vehicleMutation.mutate(data)}
+          />
 
           <div className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
@@ -693,9 +785,132 @@ function DriversTerminal() {
               {t('drivers.shareGps')}
             </Button>
           </div>
+
+          <div className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              {t('drivers.reviews')}
+            </p>
+            <p className="mt-1 text-sm text-[var(--ink-muted)]">{t('drivers.noReviewsHint')}</p>
+            <ReviewsList
+              items={reviewsQuery.data?.data ?? []}
+              empty={t('drivers.noReviews')}
+            />
+          </div>
         </div>
       </div>
     </PageScaffold>
+  );
+}
+
+function DriverVehicleForm({
+  driver,
+  saving,
+  onSave,
+}: {
+  driver: DriverListItem;
+  saving: boolean;
+  onSave: (data: {
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleColor?: string;
+    vehicleYear?: number;
+    plateNumber: string;
+    whatsapp?: string;
+  }) => void;
+}) {
+  const { t } = useTranslation();
+  const [make, setMake] = useState(driver.vehicleMake ?? '');
+  const [model, setModel] = useState(driver.vehicleModel ?? '');
+  const [color, setColor] = useState(driver.vehicleColor ?? '');
+  const [year, setYear] = useState(driver.vehicleYear ? String(driver.vehicleYear) : '');
+  const [plate, setPlate] = useState(driver.plateNumber ?? '');
+  const [whatsapp, setWhatsapp] = useState(driver.whatsapp ?? '');
+
+  const canSave = make.trim() && model.trim() && plate.trim();
+
+  return (
+    <form
+      className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!canSave) return;
+        onSave({
+          vehicleMake: make.trim(),
+          vehicleModel: model.trim(),
+          vehicleColor: color.trim() || undefined,
+          vehicleYear: year ? Number(year) : undefined,
+          plateNumber: plate.trim(),
+          whatsapp: whatsapp.trim() || undefined,
+        });
+      }}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+        {t('drivers.vehicle')}
+      </p>
+      <p className="mt-1 text-sm text-[var(--ink-muted)]">{t('drivers.vehicleHint')}</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="vehicle-make">{t('drivers.make')}</Label>
+          <Input
+            id="vehicle-make"
+            value={make}
+            onChange={(e) => setMake(e.target.value)}
+            placeholder="Mercedes"
+          />
+        </div>
+        <div>
+          <Label htmlFor="vehicle-model">{t('drivers.model')}</Label>
+          <Input
+            id="vehicle-model"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="V-Class"
+          />
+        </div>
+        <div>
+          <Label htmlFor="vehicle-color">{t('drivers.color')}</Label>
+          <Input
+            id="vehicle-color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            placeholder="Black"
+          />
+        </div>
+        <div>
+          <Label htmlFor="vehicle-year">{t('drivers.year')}</Label>
+          <Input
+            id="vehicle-year"
+            type="number"
+            min={1990}
+            max={2100}
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            placeholder="2024"
+          />
+        </div>
+        <div>
+          <Label htmlFor="vehicle-plate">{t('drivers.plate')}</Label>
+          <Input
+            id="vehicle-plate"
+            value={plate}
+            onChange={(e) => setPlate(e.target.value)}
+            placeholder="A123BC77"
+          />
+        </div>
+        <div>
+          <Label htmlFor="vehicle-whatsapp">{t('drivers.whatsapp')}</Label>
+          <Input
+            id="vehicle-whatsapp"
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="+7…"
+          />
+        </div>
+      </div>
+      <Button type="submit" className="mt-4 w-full" disabled={!canSave} loading={saving}>
+        {t('save')}
+      </Button>
+    </form>
   );
 }
 

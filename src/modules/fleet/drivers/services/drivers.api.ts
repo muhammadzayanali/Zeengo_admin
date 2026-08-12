@@ -5,6 +5,8 @@ import type {
   DriverDetail,
   DriverDutyStatus,
   DriverListItem,
+  DriverReview,
+  DriverReviewsStats,
   DriverSchedule,
   DriverStats,
   DriverTrip,
@@ -24,6 +26,9 @@ export const driverKeys = {
   trips: (id: string) => [...driverKeys.all, 'trips', id] as const,
   me: () => [...driverKeys.all, 'me'] as const,
   mySchedule: (date?: string) => [...driverKeys.all, 'me-schedule', date ?? 'today'] as const,
+  reviews: (id: string) => [...driverKeys.all, 'reviews', id] as const,
+  myReviews: () => [...driverKeys.all, 'me-reviews'] as const,
+  reviewStats: (id?: string) => [...driverKeys.all, 'review-stats', id ?? 'me'] as const,
 };
 
 export const driversApi = {
@@ -70,6 +75,38 @@ export const driversApi = {
   mySchedule(date?: string, signal?: AbortSignal) {
     return apiRequest<DriverSchedule>(
       { url: '/drivers/me/schedule', params: toQuery({ date }) },
+      signal,
+    );
+  },
+  updateMyVehicle(data: {
+    vehicleMake: string;
+    vehicleModel: string;
+    vehicleColor?: string;
+    vehicleYear?: number;
+    plateNumber: string;
+    whatsapp?: string;
+  }) {
+    return apiRequest<DriverListItem>({
+      method: 'PATCH',
+      url: '/drivers/me/vehicle',
+      data,
+    });
+  },
+  reviews(id: string, signal?: AbortSignal) {
+    return apiList<DriverReview>(
+      { url: `/drivers/${id}/reviews`, params: toQuery({ limit: 20 }) },
+      signal,
+    );
+  },
+  myReviews(signal?: AbortSignal) {
+    return apiList<DriverReview>(
+      { url: '/drivers/me/reviews', params: toQuery({ limit: 20 }) },
+      signal,
+    );
+  },
+  reviewStats(driverId?: string, signal?: AbortSignal) {
+    return apiRequest<DriverReviewsStats>(
+      { url: '/reviews/stats', params: toQuery({ driverId }) },
       signal,
     );
   },
