@@ -1,59 +1,82 @@
-import { useMemo, useState } from 'react';
-import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
-import type { OpsTaskStatus } from '@/ops-demo/store';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { driverKeys, driversApi } from '../services/drivers.api';
 import {
   Button,
+  EmptyState,
+  ErrorState,
   PageScaffold,
   Select,
+  Skeleton,
   StatsCard,
   StatusBadge,
   useToast,
   type StatusTone,
 } from '@/shared/ui';
+import { ApiClientError } from '@/shared/api/client';
+import type { DailyOperationItem } from '@/shared/api/types';
 
-function taskTone(s: OpsTaskStatus): StatusTone {
-  if (s === 'completed') return 'success';
-  if (s === 'in_progress') return 'accent';
-  if (s === 'delayed') return 'danger';
+function taskTone(status: string): StatusTone {
+  if (status === 'done') return 'success';
+  if (status === 'active') return 'accent';
+  if (status === 'cancelled') return 'danger';
   return 'default';
 }
 
-const BLOCKS = ['morning', 'afternoon', 'evening'] as const;
+function nextStatus(status: string) {
+  if (status === 'pending') return 'active';
+  if (status === 'active') return 'done';
+  return 'pending';
+}
 
 export function DriverMePage() {
-  const snap = useOpsSnapshot();
+  const { t } = useTranslation();
   const { push } = useToast();
+  const qc = useQueryClient();
   const [day, setDay] = useState<'today' | 'tomorrow'>('today');
 
-  const myTasks = useMemo(() => {
-    return snap.tasks
-      .filter((t) => t.driverId === ops.DEMO_DRIVER_ID || (!t.driverId && day === 'tomorrow'))
-      .filter((t) => (day === 'today' ? true : t.timeBlock !== 'morning'))
-      .sort((a, b) => BLOCKS.indexOf(a.timeBlock) - BLOCKS.indexOf(b.timeBlock));
-  }, [snap.tasks, day]);
+  const scheduleQuery = useQuery({
+    queryKey: driverKeys.mySchedule(day),
+    queryFn: ({ signal }) => driversApi.mySchedule(day, signal),
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+  });
 
-  const done = myTasks.filter((t) => t.done).length;
+  const items = scheduleQuery.data?.items ?? [];
+  const done = items.filter((i) => i.status === 'done').length;
 
-  async function setStatus(id: string, status: OpsTaskStatus) {
-    await ops.setTaskStatus(id, status);
-    push({
-      tone: 'success',
-      title: status === 'completed' ? 'Step completed — dashboard updated' : `Step · ${status.replace('_', ' ')}`,
-    });
-  }
+  const updateMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      driversApi.updateMyScheduleItem(id, status),
+    onSuccess: async () => {
+      push({ tone: 'success', title: t('drivers.stepUpdated') });
+      await qc.invalidateQueries({ queryKey: driverKeys.all });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
 
   return (
     <PageScaffold
-      title="My Schedule"
-      description="Chronological itinerary for your shift. Mark steps in progress or completed — Admin Command Center updates live (demo)."
+      title={t('drivers.mySchedule')}
+      description={t('drivers.myScheduleDesc')}
       stats={
         <>
-          <StatsCard label="Steps today" value={myTasks.length} />
-          <StatsCard label="Completed" value={done} tone="success" />
-          <StatsCard label="Remaining" value={myTasks.length - done} tone="warning" />
+          <StatsCard label={t('drivers.stepsToday')} value={items.length} />
+          <StatsCard label={t('drivers.completed')} value={done} tone="success" />
           <StatsCard
-            label="Progress"
-            value={`${myTasks.length ? Math.round((done / myTasks.length) * 100) : 0}%`}
+            label={t('drivers.remaining')}
+            value={items.length - done}
+            tone="warning"
+          />
+          <StatsCard
+            label={t('drivers.progress')}
+            value={`${items.length ? Math.round((done / items.length) * 100) : 0}%`}
             tone="accent"
           />
         </>
@@ -64,75 +87,84 @@ export function DriverMePage() {
           value={day}
           onChange={(e) => setDay(e.target.value as 'today' | 'tomorrow')}
         >
-          <option value="today">Today</option>
-          <option value="tomorrow">Tomorrow</option>
+          <option value="today">{t('today')}</option>
+          <option value="tomorrow">{t('tomorrow')}</option>
         </Select>
       }
     >
-      <div className="space-y-3">
-        {myTasks.length === 0 ? (
-          <p className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-6 text-sm text-[var(--ink-muted)]">
-            No itinerary steps for this day.
-          </p>
-        ) : (
-          myTasks.map((t) => {
-            const client = snap.clients.find((c) => c.id === t.clientId);
+      {scheduleQuery.isLoading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : scheduleQuery.isError ? (
+        <ErrorState
+          title={t('drivers.scheduleFailed')}
+          description={
+            scheduleQuery.error instanceof ApiClientError
+              ? scheduleQuery.error.message
+              : undefined
+          }
+          onRetry={() => void scheduleQuery.refetch()}
+        />
+      ) : items.length === 0 ? (
+        <EmptyState title={t('drivers.noTrips')} description={t('drivers.noTripsHint')} />
+      ) : (
+        <div className="space-y-3">
+          {items.map((item: DailyOperationItem) => {
+            const complete = item.status === 'done';
             return (
               <div
-                key={t.id}
+                key={item.id}
                 className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)] sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex min-w-0 items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 accent-[var(--accent)]"
-                    checked={t.done}
-                    onChange={() => void setStatus(t.id, t.done ? 'pending' : 'completed')}
-                    aria-label={`Mark ${t.title} complete`}
-                  />
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className={`font-semibold ${t.done ? 'line-through opacity-60' : ''}`}>
-                        {t.title}
-                      </p>
-                      <StatusBadge tone={taskTone(t.status)}>
-                        {t.status.replace('_', ' ')}
-                      </StatusBadge>
-                    </div>
-                    <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                      <span className="capitalize">{t.timeBlock}</span>
-                      {' · '}
-                      {t.location}
-                      {client ? ` · ${client.fullName} (${client.znCode})` : ''}
-                      {' · '}
-                      {t.serviceType.replace('_', ' ')}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={`font-semibold ${complete ? 'line-through opacity-60' : ''}`}>
+                      {item.startTime ? `${item.startTime.slice(0, 5)} · ` : ''}
+                      {item.title}
                     </p>
+                    <StatusBadge tone={taskTone(item.status)}>
+                      {item.status.replace('_', ' ')}
+                    </StatusBadge>
                   </div>
+                  <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                    {item.locationName || '—'}
+                    {item.clientName ? ` · ${item.clientName}` : ''}
+                    {item.znCode ? ` (${item.znCode})` : ''}
+                  </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
                   <Button
                     type="button"
                     variant="secondary"
                     className="!px-3 !py-1.5 text-xs"
-                    disabled={t.status === 'in_progress'}
-                    onClick={() => void setStatus(t.id, 'in_progress')}
+                    disabled={item.status === 'active' || updateMutation.isPending}
+                    onClick={() =>
+                      updateMutation.mutate({ id: item.id, status: 'active' })
+                    }
                   >
-                    In progress
+                    {t('drivers.inProgress')}
                   </Button>
                   <Button
                     type="button"
                     className="!px-3 !py-1.5 text-xs"
-                    disabled={t.done}
-                    onClick={() => void setStatus(t.id, 'completed')}
+                    disabled={complete || updateMutation.isPending}
+                    onClick={() =>
+                      updateMutation.mutate({
+                        id: item.id,
+                        status: nextStatus(item.status) === 'pending' ? 'done' : 'done',
+                      })
+                    }
                   >
-                    Complete
+                    {t('drivers.complete')}
                   </Button>
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </PageScaffold>
   );
 }

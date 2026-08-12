@@ -398,6 +398,18 @@ export interface DriverUserSummary {
   avatarUrl: string | null;
 }
 
+export type DriverDutyStatus = 'available' | 'en_route' | 'resting' | 'off_duty';
+
+export interface DriverActiveAssignment {
+  id: string;
+  bookingId: string;
+  znCode: string | null;
+  clientName: string | null;
+  clientPhone: string | null;
+  startDate: string;
+  endDate: string | null;
+}
+
 export interface DriverListItem {
   id: string;
   userId: string;
@@ -409,13 +421,14 @@ export interface DriverListItem {
   whatsapp: string | null;
   rating: string;
   tripsCount: number;
-  status: string;
+  status: DriverDutyStatus | string;
   lastLat: number | null;
   lastLng: number | null;
   lastGpsAt: string | null;
   createdAt: string;
   updatedAt: string;
   user: DriverUserSummary;
+  activeAssignment?: DriverActiveAssignment | null;
 }
 
 export interface DriverDetail extends DriverListItem {
@@ -427,12 +440,33 @@ export interface DriverAssignment {
   bookingId: string;
   znCode: string | null;
   clientName: string | null;
+  clientPhone?: string | null;
   driverId: string;
   startDate: string;
   endDate: string | null;
   status: string;
   assignedBy: string;
   createdAt: string;
+}
+
+export interface UnassignedBooking {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  clientPhone: string | null;
+  packageName: string | null;
+  arrivalDate: string | null;
+  departureDate: string | null;
+  isVip: boolean;
+}
+
+export interface DriverStats {
+  total: number;
+  available: number;
+  enRoute: number;
+  resting: number;
+  offDuty: number;
+  unassignedBookings: number;
 }
 
 export interface DriverTrip {
