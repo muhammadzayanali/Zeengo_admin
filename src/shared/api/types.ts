@@ -208,16 +208,84 @@ export interface Task {
   createdAt: string;
 }
 
+export type VendorType =
+  | 'hotel'
+  | 'restaurant'
+  | 'guide'
+  | 'bus'
+  | 'activity'
+  | 'driver';
+
+export type VendorPaymentTerms = 'bank_transfer' | 'cash' | 'voucher';
+
+export type VendorBookingStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'completed'
+  | 'cancelled';
+
 export interface Vendor {
   id: string;
   name: string;
-  type: string;
+  type: VendorType | string;
   city: string | null;
   contactName: string | null;
   phone: string | null;
   email: string | null;
   commissionPct: number | null;
+  paymentTerms?: string | null;
+  cancellationPolicy?: string | null;
+  notes?: string | null;
   isActive: boolean;
+  activeBookingsCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface VendorBookingRow {
+  id: string;
+  vendorId: string;
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  itineraryItemId: string | null;
+  amount: number | null;
+  commissionAmount: number | null;
+  serviceDate: string | null;
+  pax: number | null;
+  details: string | null;
+  voucherCode: string | null;
+  voucherSentAt: string | null;
+  status: VendorBookingStatus | string;
+  createdAt: string;
+}
+
+export interface VendorDetail extends Vendor {
+  finance: VendorFinance;
+  bookings: VendorBookingRow[];
+}
+
+export interface VendorStats {
+  total: number;
+  hotel: number;
+  restaurant: number;
+  guide: number;
+  bus: number;
+  activity: number;
+  driver: number;
+}
+
+export interface VendorVoucher {
+  vendorBookingId: string;
+  voucherCode: string;
+  vendorName: string;
+  vendorEmail: string | null;
+  znCode: string;
+  clientName: string;
+  serviceDate: string | null;
+  pax: number | null;
+  details: string | null;
+  email: { to: string | null; subject: string; body: string };
 }
 
 export interface EditRequest {
