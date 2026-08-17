@@ -567,6 +567,7 @@ const en = {
     slaUnder: 'Under {{minutes}} minutes',
     languages: 'Languages',
     languageList: 'Arabic · English · Russian',
+    noOpsManager: 'No active ops manager on the staff roster yet. Add one under Users.',
     sla: 'Guaranteed response under {{minutes}} minutes',
     conciergeFile: 'Concierge file',
     escalate: 'Escalate',

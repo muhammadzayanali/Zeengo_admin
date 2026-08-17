@@ -569,6 +569,7 @@ const ar: TranslationSchema = {
     slaUnder: 'أقل من {{minutes}} دقائق',
     languages: 'اللغات',
     languageList: 'العربية · الإنجليزية · الروسية',
+    noOpsManager: 'لا يوجد مدير عمليات نشط في دليل الموظفين. أضفه من المستخدمين.',
     sla: 'استجابة مضمونة خلال أقل من {{minutes}} دقائق',
     conciergeFile: 'ملف الكونسيرج',
     escalate: 'تصعيد',

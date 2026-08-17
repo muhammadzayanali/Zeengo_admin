@@ -595,6 +595,13 @@ export interface VendorFinance {
   completedAmount: number;
 }
 
+export interface VipOpsManager {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  email: string;
+}
+
 export interface VipOverview {
   totalVipBookings: number;
   pendingUpgradeRequests: number;
@@ -603,6 +610,7 @@ export interface VipOverview {
   hotline: string;
   slaMinutes: number;
   inclusions: string[];
+  opsManagers?: VipOpsManager[];
 }
 
 export interface VipClient {

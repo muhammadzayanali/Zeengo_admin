@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { vipApi, vipKeys } from '../services/vip.api';
 import { editRequestsApi } from '@/modules/clients/edit-requests/services/edit-requests.api';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 import {
   Button,
   DetailDrawer,
@@ -57,6 +58,7 @@ export function VipPage() {
   const { t } = useTranslation();
   const { push } = useToast();
   const qc = useQueryClient();
+  const { hasRole } = useAuth();
 
   const [tab, setTab] = useState<VipTab>('clients');
   const [activateId, setActivateId] = useState('');
@@ -315,6 +317,7 @@ export function VipPage() {
           onRetry={() => void overviewQuery.refetch()}
           overview={overview}
           loadFailed={t('vip.loadFailed')}
+          showOpsLine={hasRole('ops_manager', 'admin')}
         />
       ) : null}
 
@@ -581,6 +584,7 @@ function OverviewPanel({
   onRetry,
   overview,
   loadFailed,
+  showOpsLine,
 }: {
   loading: boolean;
   error: boolean;
@@ -593,8 +597,15 @@ function OverviewPanel({
     hotline: string;
     slaMinutes: number;
     inclusions: string[];
+    opsManagers?: Array<{
+      id: string;
+      fullName: string;
+      phone: string | null;
+      email: string;
+    }>;
   };
   loadFailed: string;
+  showOpsLine: boolean;
 }) {
   const { t } = useTranslation();
   if (loading) {
@@ -658,42 +669,69 @@ function OverviewPanel({
         </ul>
       </section>
 
-      {/* Ops line */}
-      <section className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
-        <div className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-[var(--accent)]" aria-hidden />
-          <h3 className="text-base font-semibold text-[var(--ink)]">
-            {t('vip.opsLine')}
-          </h3>
-        </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
-              {t('vip.whatsappHotline')}
-            </p>
-            <p className="mt-1 font-semibold text-[var(--accent)]">
-              {overview.hotline}
-            </p>
+      {/* Ops line — ops manager (and admin) roster details */}
+      {showOpsLine ? (
+        <section className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+            <h3 className="text-base font-semibold text-[var(--ink)]">
+              {t('vip.opsLine')}
+            </h3>
           </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
-              {t('vip.responseSla')}
-            </p>
-            <p className="mt-1 flex items-center gap-1.5 font-semibold text-[var(--ink)]">
-              <Clock className="h-4 w-4 text-[var(--success)]" aria-hidden />
-              {t('vip.slaUnder', { minutes: overview.slaMinutes })}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
-              {t('vip.languages')}
-            </p>
-            <p className="mt-1 font-semibold text-[var(--ink)]">
-              {t('vip.languageList')}
-            </p>
-          </div>
-        </div>
-      </section>
+          {(overview.opsManagers ?? []).length > 0 ? (
+            <ul className="mt-4 space-y-3">
+              {overview.opsManagers!.map((mgr) => (
+                <li
+                  key={mgr.id}
+                  className="grid gap-4 rounded-xl border border-[var(--line)] bg-[var(--bg-muted)]/50 p-3 sm:grid-cols-3"
+                >
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                      {t('roles.ops_manager')}
+                    </p>
+                    <p className="mt-1 font-semibold text-[var(--ink)]">{mgr.fullName}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">{mgr.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                      {t('vip.whatsappHotline')}
+                    </p>
+                    {mgr.phone ? (
+                      <a
+                        className="mt-1 inline-block font-semibold text-[var(--accent)]"
+                        href={`https://wa.me/${mgr.phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {mgr.phone}
+                      </a>
+                    ) : (
+                      <p className="mt-1 font-semibold text-[var(--ink)]">{overview.hotline}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                      {t('vip.responseSla')}
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 font-semibold text-[var(--ink)]">
+                      <Clock className="h-4 w-4 text-[var(--success)]" aria-hidden />
+                      {t('vip.slaUnder', { minutes: overview.slaMinutes })}
+                    </p>
+                    <p className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+                      {t('vip.languages')}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--ink)]">
+                      {t('vip.languageList')}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-[var(--ink-muted)]">{t('vip.noOpsManager')}</p>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }
