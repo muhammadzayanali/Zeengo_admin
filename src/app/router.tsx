@@ -128,10 +128,10 @@ const OperationsRoomPage = lazy(() =>
   })),
 );
 const GuidesPage = lazy(() =>
-  import('@/modules/admin/stubs/pages/StubPages').then((m) => ({ default: m.GuidesPage })),
+  import('@/modules/fleet/guides/pages/GuidesPage').then((m) => ({ default: m.GuidesPage })),
 );
 const RolesPage = lazy(() =>
-  import('@/modules/admin/stubs/pages/StubPages').then((m) => ({ default: m.RolesPage })),
+  import('@/modules/admin/roles/pages/RolesPage').then((m) => ({ default: m.RolesPage })),
 );
 const EmailPage = lazy(() =>
   import('@/modules/tools/email/pages/EmailPage').then((m) => ({ default: m.EmailPage })),

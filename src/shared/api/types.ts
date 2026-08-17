@@ -158,7 +158,7 @@ export interface Package {
   slug: string;
   pricePerPerson: number;
   minPersons: number;
-  durationDays: number;
+  durationDays: number | null;
   description: string | null;
   inclusions: string[];
   isActive: boolean;
@@ -342,6 +342,8 @@ export interface ChatMessage {
   createdAt: string;
   senderType?: string;
   senderName?: string | null;
+  senderStaffId?: string | null;
+  senderClientId?: string | null;
   bodyTranslated?: Record<string, string>;
 }
 

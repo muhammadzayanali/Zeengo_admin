@@ -102,11 +102,13 @@ export function SosPage() {
     setResolving(true);
     try {
       await sosApi.resolve(resolveId);
+      const alert = (listQuery.data?.data ?? []).find((s) => s.id === resolveId);
+      if (notes.trim() && alert?.bookingId) {
+        await bookingsApi.addNote(alert.bookingId, `SOS resolved: ${notes.trim()}`);
+      }
       push({
         tone: 'success',
-        title: notes.trim()
-          ? 'SOS resolved'
-          : 'SOS resolved',
+        title: 'SOS resolved',
         description: notes.trim() || undefined,
       });
       setResolveId(null);
@@ -286,7 +288,7 @@ export function SosPage() {
         </p>
         <Textarea
           rows={3}
-          placeholder="Resolution notes (logged locally for ops handoff)…"
+          placeholder="Resolution notes (saved on the booking file)…"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />

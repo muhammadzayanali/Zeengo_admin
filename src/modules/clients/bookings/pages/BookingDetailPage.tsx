@@ -30,6 +30,9 @@ export function BookingDetailPage() {
   const [checkTitle, setCheckTitle] = useState('');
   const [itemTitle, setItemTitle] = useState('');
   const [itemDay, setItemDay] = useState(1);
+  const [itemDate, setItemDate] = useState('');
+  const [itemTime, setItemTime] = useState('');
+  const [itemLocation, setItemLocation] = useState('');
 
   const booking = useQuery({
     queryKey: ['bookings', id],
@@ -89,9 +92,17 @@ export function BookingDetailPage() {
   });
   const addItem = useMutation({
     mutationFn: () =>
-      itinerariesApi.addItem(id, { dayNumber: Number(itemDay), title: itemTitle }),
+      itinerariesApi.addItem(id, {
+        dayNumber: Number(itemDay),
+        title: itemTitle,
+        itemDate: itemDate || undefined,
+        startTime: itemTime || undefined,
+        locationName: itemLocation.trim() || undefined,
+      }),
     onSuccess: () => {
       setItemTitle('');
+      setItemLocation('');
+      setItemTime('');
       invalidate();
       qc.invalidateQueries({ queryKey: ['bookings', id, 'itinerary'] });
     },
@@ -184,20 +195,38 @@ export function BookingDetailPage() {
 
         <Card className="lg:col-span-2">
           <h2 className="text-lg font-bold">{t('bookings.itinerary')}</h2>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <Input
-              className="w-20"
+              className="w-full"
               type="number"
               min={1}
               value={itemDay}
               onChange={(e) => setItemDay(Number(e.target.value))}
+              placeholder={t('bookings.day')}
             />
             <Input
-              className="min-w-[180px] flex-1"
+              type="date"
+              value={itemDate}
+              onChange={(e) => setItemDate(e.target.value)}
+            />
+            <Input
+              type="time"
+              value={itemTime}
+              onChange={(e) => setItemTime(e.target.value)}
+            />
+            <Input
+              placeholder={t('bookings.location')}
+              value={itemLocation}
+              onChange={(e) => setItemLocation(e.target.value)}
+            />
+            <Input
+              className="sm:col-span-2 lg:col-span-1"
               placeholder={t('bookings.activityTitle')}
               value={itemTitle}
               onChange={(e) => setItemTitle(e.target.value)}
             />
+          </div>
+          <div className="mt-2">
             <Button
               disabled={!itemTitle}
               loading={addItem.isPending}

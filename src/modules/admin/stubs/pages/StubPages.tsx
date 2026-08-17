@@ -11,23 +11,4 @@ export function OperationsRoomPage() {
   );
 }
 
-export function GuidesPage() {
-  const { t } = useTranslation();
-  return (
-    <StubPage
-      title={t('nav.guides')}
-      description="Tour guide roster, availability, and assignment queue for VIP itineraries."
-    />
-  );
-}
-
-export function RolesPage() {
-  const { t } = useTranslation();
-  return (
-    <StubPage
-      title={t('nav.roles')}
-      description="Role matrix and permission policies for Command Center staff."
-    />
-  );
-}
 

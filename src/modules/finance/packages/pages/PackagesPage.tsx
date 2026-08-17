@@ -1,140 +1,260 @@
 import { useState } from 'react';
-import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
-import type { OpsPackage } from '@/ops-demo/store';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { packagesApi, type PackageInput } from '../services/packages.api';
 import {
   Button,
   DialogShell,
+  EmptyState,
+  ErrorState,
   Input,
   Label,
   PageScaffold,
+  Skeleton,
   StatusBadge,
   Textarea,
   useToast,
 } from '@/shared/ui';
+import { ApiClientError } from '@/shared/api/client';
+import { formatMoney } from '@/shared/lib/cn';
+import type { Package } from '@/shared/api/types';
+
+const emptyForm = (): PackageInput & { id?: string } => ({
+  name: '',
+  slug: '',
+  pricePerPerson: 0,
+  minPersons: 1,
+  durationDays: undefined,
+  description: '',
+  inclusions: [],
+});
 
 export function PackagesPage() {
-  const snap = useOpsSnapshot();
+  const { t } = useTranslation();
   const { push } = useToast();
+  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<OpsPackage>({
-    id: '',
-    name: '',
-    priceUsd: 0,
-    priceSar: 0,
-    inclusions: [],
-    driverHours: 4,
-    vipConcierge: false,
-    validityDays: 7,
-  });
+  const [form, setForm] = useState(emptyForm());
   const [inclusionsText, setInclusionsText] = useState('');
 
+  const listQuery = useQuery({
+    queryKey: ['packages'],
+    queryFn: ({ signal }) => packagesApi.list(signal),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const payload: PackageInput = {
+        name: form.name.trim(),
+        slug: form.slug?.trim() || undefined,
+        pricePerPerson: Number(form.pricePerPerson),
+        minPersons: Number(form.minPersons) || 1,
+        durationDays: form.durationDays ? Number(form.durationDays) : undefined,
+        description: form.description?.trim() || undefined,
+        inclusions: inclusionsText
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      };
+      return form.id
+        ? packagesApi.update(form.id, payload)
+        : packagesApi.create(payload);
+    },
+    onSuccess: async () => {
+      push({ tone: 'success', title: form.id ? t('packages.updated') : t('packages.created') });
+      setOpen(false);
+      await qc.invalidateQueries({ queryKey: ['packages'] });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => packagesApi.remove(id),
+    onSuccess: async () => {
+      push({ tone: 'success', title: t('packages.removed') });
+      await qc.invalidateQueries({ queryKey: ['packages'] });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
+
   function openCreate() {
-    setForm({
-      id: `pkg_${Date.now()}`,
-      name: '',
-      priceUsd: 0,
-      priceSar: 0,
-      inclusions: [],
-      driverHours: 4,
-      vipConcierge: false,
-      validityDays: 7,
-    });
+    setForm(emptyForm());
     setInclusionsText('');
     setOpen(true);
   }
 
-  function openEdit(pkg: OpsPackage) {
-    setForm({ ...pkg });
+  function openEdit(pkg: Package) {
+    setForm({
+      id: pkg.id,
+      name: pkg.name,
+      slug: pkg.slug,
+      pricePerPerson: pkg.pricePerPerson,
+      minPersons: pkg.minPersons,
+      durationDays: pkg.durationDays ?? undefined,
+      description: pkg.description ?? '',
+      inclusions: pkg.inclusions,
+    });
     setInclusionsText(pkg.inclusions.join(', '));
     setOpen(true);
   }
 
+  const packages = listQuery.data ?? [];
+
   return (
     <PageScaffold
-      title="Packages"
-      description="Catalog manager for VIP transfers, executive tours, and airport pickups."
-      primaryAction={<Button type="button" onClick={openCreate}>Package builder</Button>}
+      title={t('packages.title')}
+      description={t('packages.description')}
+      primaryAction={
+        <Button type="button" onClick={openCreate}>
+          {t('packages.newPackage')}
+        </Button>
+      }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {snap.packages.map((pkg) => (
-          <article
-            key={pkg.id}
-            className="flex flex-col rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold">{pkg.name}</h3>
-              {pkg.vipConcierge ? <StatusBadge tone="accent">VIP</StatusBadge> : null}
-            </div>
-            <p className="mt-2 text-2xl font-semibold text-[var(--accent)]">
-              ${pkg.priceUsd.toLocaleString()}
-              <span className="ms-2 text-sm font-normal text-[var(--ink-muted)]">
-                / {pkg.priceSar.toLocaleString()} SAR
-              </span>
-            </p>
-            <ul className="mt-3 flex-1 space-y-1 text-sm text-[var(--ink-muted)]">
-              {pkg.inclusions.map((i) => (
-                <li key={i}>• {i}</li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs text-[var(--ink-muted)]">
-              {pkg.driverHours}h driver · {pkg.validityDays}d validity
-            </p>
-            <Button type="button" variant="secondary" className="mt-4" onClick={() => openEdit(pkg)}>
-              Edit
-            </Button>
-          </article>
-        ))}
-      </div>
+      {listQuery.isLoading ? (
+        <Skeleton className="h-48 w-full" />
+      ) : listQuery.isError ? (
+        <ErrorState title={t('packages.loadFailed')} onRetry={() => void listQuery.refetch()} />
+      ) : packages.length === 0 ? (
+        <EmptyState title={t('packages.empty')} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {packages.map((pkg) => (
+            <article
+              key={pkg.id}
+              className="flex flex-col rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold">{pkg.name}</h3>
+                <StatusBadge tone={pkg.isActive ? 'success' : 'default'}>
+                  {pkg.isActive ? t('common.active') : t('common.inactive')}
+                </StatusBadge>
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-[var(--accent)]">
+                {formatMoney(pkg.pricePerPerson)}
+                <span className="ms-2 text-sm font-normal text-[var(--ink-muted)]">
+                  / {t('packages.person')}
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">{pkg.slug}</p>
+              {pkg.description ? (
+                <p className="mt-2 text-sm text-[var(--ink-muted)]">{pkg.description}</p>
+              ) : null}
+              <ul className="mt-3 flex-1 space-y-1 text-sm text-[var(--ink-muted)]">
+                {pkg.inclusions.map((i) => (
+                  <li key={i}>• {i}</li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-[var(--ink-muted)]">
+                {t('packages.minPersons')}: {pkg.minPersons}
+                {pkg.durationDays ? ` · ${pkg.durationDays}d` : ''}
+              </p>
+              <div className="mt-4 flex gap-2">
+                <Button type="button" variant="secondary" onClick={() => openEdit(pkg)}>
+                  {t('edit')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => removeMutation.mutate(pkg.id)}
+                  loading={removeMutation.isPending}
+                >
+                  {t('packages.remove')}
+                </Button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
 
-      <DialogShell open={open} title="Package builder" onClose={() => setOpen(false)} wide>
+      <DialogShell
+        open={open}
+        title={form.id ? t('packages.editPackage') : t('packages.createPackage')}
+        onClose={() => setOpen(false)}
+        wide
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Label>Name</Label>
+            <Label>{t('common.name')}</Label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div>
-            <Label>Price USD</Label>
-            <Input type="number" value={form.priceUsd} onChange={(e) => setForm({ ...form, priceUsd: Number(e.target.value) })} />
+            <Label>{t('packages.slug')}</Label>
+            <Input
+              value={form.slug ?? ''}
+              placeholder={t('packages.autoSlug')}
+              onChange={(e) => setForm({ ...form, slug: e.target.value })}
+            />
           </div>
           <div>
-            <Label>Price SAR</Label>
-            <Input type="number" value={form.priceSar} onChange={(e) => setForm({ ...form, priceSar: Number(e.target.value) })} />
+            <Label>{t('packages.pricePerPerson')}</Label>
+            <Input
+              type="number"
+              min={0}
+              value={form.pricePerPerson}
+              onChange={(e) => setForm({ ...form, pricePerPerson: Number(e.target.value) })}
+            />
           </div>
           <div>
-            <Label>Driver hours</Label>
-            <Input type="number" value={form.driverHours} onChange={(e) => setForm({ ...form, driverHours: Number(e.target.value) })} />
+            <Label>{t('packages.minPersons')}</Label>
+            <Input
+              type="number"
+              min={1}
+              value={form.minPersons ?? 1}
+              onChange={(e) => setForm({ ...form, minPersons: Number(e.target.value) })}
+            />
           </div>
           <div>
-            <Label>Validity days</Label>
-            <Input type="number" value={form.validityDays} onChange={(e) => setForm({ ...form, validityDays: Number(e.target.value) })} />
+            <Label>{t('packages.durationDays')}</Label>
+            <Input
+              type="number"
+              min={1}
+              value={form.durationDays ?? ''}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  durationDays: e.target.value ? Number(e.target.value) : undefined,
+                })
+              }
+            />
           </div>
           <div className="sm:col-span-2">
-            <Label>Inclusions (comma-separated)</Label>
-            <Textarea rows={3} value={inclusionsText} onChange={(e) => setInclusionsText(e.target.value)} />
-          </div>
-          <label className="inline-flex items-center gap-2 text-sm sm:col-span-2">
-            <input
-              type="checkbox"
-              checked={form.vipConcierge}
-              onChange={(e) => setForm({ ...form, vipConcierge: e.target.checked })}
+            <Label>{t('packages.descriptionLabel')}</Label>
+            <Textarea
+              rows={2}
+              value={form.description ?? ''}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
-            VIP concierge access
-          </label>
+          </div>
+          <div className="sm:col-span-2">
+            <Label>{t('packages.inclusions')}</Label>
+            <Textarea
+              rows={3}
+              value={inclusionsText}
+              onChange={(e) => setInclusionsText(e.target.value)}
+            />
+          </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+            {t('cancel')}
+          </Button>
           <Button
             type="button"
-            onClick={async () => {
-              await ops.upsertPackage({
-                ...form,
-                inclusions: inclusionsText.split(',').map((s) => s.trim()).filter(Boolean),
-              });
-              push({ tone: 'success', title: 'Package saved' });
-              setOpen(false);
-            }}
+            disabled={!form.name.trim() || !form.pricePerPerson}
+            loading={saveMutation.isPending}
+            onClick={() => saveMutation.mutate()}
           >
-            Save package
+            {t('save')}
           </Button>
         </div>
       </DialogShell>

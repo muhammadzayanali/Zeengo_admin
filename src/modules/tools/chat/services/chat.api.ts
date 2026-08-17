@@ -1,6 +1,12 @@
 import { apiRequest, toQuery } from '@/shared/api/client';
 import type { ChatMessage, ClientThread, Conversation } from '@/shared/api/types';
 
+export const chatKeys = {
+  all: ['chat'] as const,
+  conversations: () => [...chatKeys.all, 'conversations'] as const,
+  messages: (id: string) => [...chatKeys.all, 'messages', id] as const,
+};
+
 export const chatApi = {
   conversations(signal?: AbortSignal) {
     return apiRequest<Conversation[]>({ url: '/chat/conversations' }, signal);

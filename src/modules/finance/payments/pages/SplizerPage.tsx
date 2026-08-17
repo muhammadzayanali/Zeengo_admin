@@ -1,94 +1,150 @@
 import { useMemo, useState } from 'react';
-import { ops, useOpsSnapshot } from '@/ops-demo/useOpsStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { paymentsApi, type CashMethod } from '../services/payments.api';
 import {
   Button,
+  EmptyState,
+  ErrorState,
   Input,
   Label,
   PageScaffold,
+  Pagination,
   SearchBar,
   Select,
+  Skeleton,
   StatsCard,
   TabBar,
   useToast,
 } from '@/shared/ui';
+import { ApiClientError } from '@/shared/api/client';
+import { formatDate, formatMoney } from '@/shared/lib/cn';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+import type { SplizerClient } from '@/shared/api/types';
 
 type Tab = 'clients' | 'cash' | 'stripe' | 'history';
 
-function money(n: number) {
-  return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-}
-
 export function SplizerPage() {
-  const snap = useOpsSnapshot();
+  const { t } = useTranslation();
   const { push } = useToast();
+  const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('clients');
   const [q, setQ] = useState('');
-  const [cashClient, setCashClient] = useState('');
+  const search = useDebouncedValue(q);
+  const [page, setPage] = useState(1);
+  const [histPage, setHistPage] = useState(1);
+  const [cashBooking, setCashBooking] = useState('');
   const [cashAmount, setCashAmount] = useState('');
   const [cashNote, setCashNote] = useState('');
-  const [stripeClient, setStripeClient] = useState('');
+  const [cashMethod, setCashMethod] = useState<CashMethod>('cash');
+  const [stripeBooking, setStripeBooking] = useState('');
   const [stripeAmount, setStripeAmount] = useState('');
   const [lastStripeUrl, setLastStripeUrl] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const clients = useMemo(() => {
-    return snap.clients
-      .filter((c) => c.status === 'active')
-      .filter((c) =>
-        `${c.fullName} ${c.znCode} ${c.packageName}`.toLowerCase().includes(q.toLowerCase()),
-      );
-  }, [snap.clients, q]);
+  const clientsQuery = useQuery({
+    queryKey: ['payments', 'splizer', { page, search }],
+    queryFn: ({ signal }) =>
+      paymentsApi.splizerClients(
+        { page, limit: 24, search: search || undefined },
+        signal,
+      ),
+  });
 
-  const dueTotal = snap.clients.reduce((s, c) => s + c.outstanding, 0);
-  const paidToday = snap.payments
-    .filter((p) => Date.now() - new Date(p.at).getTime() < 86400_000)
-    .reduce((s, p) => s + p.amount, 0);
+  const historyQuery = useQuery({
+    queryKey: ['payments', 'history', { page: histPage }],
+    queryFn: ({ signal }) =>
+      paymentsApi.history({ page: histPage, limit: 20 }, signal),
+    enabled: tab === 'history',
+  });
 
-  async function onCollectCash() {
-    if (!cashClient || !cashAmount) return;
-    setBusy(true);
-    try {
-      await ops.collectCash(cashClient, Number(cashAmount), cashNote);
-      push({ tone: 'success', title: 'Cash collection logged' });
+  const clients = clientsQuery.data?.data ?? [];
+  const dueTotal = clients.reduce((s, c) => s + c.dueAmount, 0);
+  const dueCount = clients.filter((c) => c.dueAmount > 0).length;
+
+  const cashMutation = useMutation({
+    mutationFn: () =>
+      paymentsApi.cash({
+        bookingId: cashBooking,
+        amount: Number(cashAmount),
+        method: cashMethod,
+        notes: cashNote.trim() || undefined,
+      }),
+    onSuccess: async () => {
+      push({ tone: 'success', title: t('splizer.collected') });
       setCashAmount('');
       setCashNote('');
       setTab('history');
-    } finally {
-      setBusy(false);
-    }
-  }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['payments'] }),
+        qc.invalidateQueries({ queryKey: ['bookings'] }),
+      ]);
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
 
-  async function onStripeLink() {
-    if (!stripeClient || !stripeAmount) return;
-    setBusy(true);
-    try {
-      const pay = await ops.createStripeLink(stripeClient, Number(stripeAmount));
-      setLastStripeUrl(pay.stripeUrl ?? null);
-      push({ tone: 'success', title: 'Stripe checkout link ready' });
-    } finally {
-      setBusy(false);
+  const stripeMutation = useMutation({
+    mutationFn: () =>
+      paymentsApi.stripeLink({
+        bookingId: stripeBooking,
+        amount: Number(stripeAmount),
+      }),
+    onSuccess: async (row) => {
+      const url = row.stripeLinkUrl ?? row.url ?? null;
+      setLastStripeUrl(url);
+      push({
+        tone: 'success',
+        title: url ? t('payments.stripeSuccess') : t('splizer.linkReady'),
+      });
+      await qc.invalidateQueries({ queryKey: ['payments'] });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
+
+  const allForSelect = useMemo(() => clients, [clients]);
+
+  function pickClient(c: SplizerClient, next: Tab) {
+    if (next === 'cash') {
+      setCashBooking(c.id);
+      setCashAmount(c.dueAmount ? String(c.dueAmount) : '');
+    } else {
+      setStripeBooking(c.id);
+      setStripeAmount(c.dueAmount ? String(c.dueAmount) : '');
     }
+    setTab(next);
   }
 
   return (
     <PageScaffold
-      title="Splizer"
-      description="Cash collections, payment tracking, and financial reconciliation for ground staff."
+      title={t('splizer.title')}
+      description={t('splizer.description')}
       stats={
         <>
-          <StatsCard label="Clients with due" value={snap.clients.filter((c) => c.outstanding > 0).length} tone="warning" />
-          <StatsCard label="Total outstanding" value={money(dueTotal)} tone="danger" />
-          <StatsCard label="Logged (24h)" value={money(paidToday)} tone="success" />
-          <StatsCard label="Ledger rows" value={snap.payments.length} tone="accent" />
+          <StatsCard label={t('splizer.withDue')} value={dueCount} tone="warning" />
+          <StatsCard label={t('splizer.due')} value={formatMoney(dueTotal)} tone="danger" />
+          <StatsCard
+            label={t('splizer.onPage')}
+            value={clientsQuery.data?.meta.total ?? 0}
+            tone="accent"
+          />
         </>
       }
     >
       <TabBar
         tabs={[
-          { id: 'clients', label: 'Collections', count: clients.length },
-          { id: 'cash', label: 'Collect Cash' },
-          { id: 'stripe', label: 'Stripe Link' },
-          { id: 'history', label: 'History', count: snap.payments.length },
+          { id: 'clients', label: t('splizer.collections'), count: clients.length },
+          { id: 'cash', label: t('splizer.recordCash') },
+          { id: 'stripe', label: t('splizer.stripe') },
+          { id: 'history', label: t('splizer.history') },
         ]}
         value={tab}
         onChange={(id) => setTab(id as Tab)}
@@ -96,141 +152,152 @@ export function SplizerPage() {
 
       {tab === 'clients' ? (
         <div className="mt-4 space-y-3">
-          <SearchBar value={q} onChange={setQ} placeholder="Client, ZN, package…" className="max-w-sm" />
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {clients.map((c) => {
-              const total = c.totalSpent + c.outstanding;
-              return (
-                <div
-                  key={c.id}
-                  className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold">{c.fullName}</p>
-                      <p className="text-xs text-[var(--ink-muted)]">{c.znCode}</p>
+          <SearchBar
+            value={q}
+            onChange={(v) => {
+              setQ(v);
+              setPage(1);
+            }}
+            placeholder={t('splizer.searchPlaceholder')}
+            className="max-w-sm"
+          />
+          {clientsQuery.isLoading ? (
+            <Skeleton className="h-40 w-full" />
+          ) : clientsQuery.isError ? (
+            <ErrorState
+              title={t('splizer.loadFailed')}
+              onRetry={() => void clientsQuery.refetch()}
+            />
+          ) : clients.length === 0 ? (
+            <EmptyState title={t('splizer.empty')} />
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {clients.map((c) => (
+                  <div
+                    key={c.id}
+                    className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">{c.clientName}</p>
+                        <p className="text-xs text-[var(--ink-muted)]">{c.znCode}</p>
+                      </div>
+                      <span className="text-xs text-[var(--ink-muted)]">{c.status}</span>
                     </div>
-                    {c.outstanding > 0 ? (
-                      <span className="rounded-md bg-[var(--danger-soft,rgba(239,68,68,0.12))] px-2 py-0.5 text-xs font-semibold text-[var(--danger)]">
-                        Due
-                      </span>
-                    ) : (
-                      <span className="rounded-md bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
-                        Paid
-                      </span>
-                    )}
+                    <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <dt className="text-xs text-[var(--ink-muted)]">{t('common.amount')}</dt>
+                        <dd className="font-semibold">{formatMoney(c.totalAmount)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-[var(--ink-muted)]">{t('splizer.paid')}</dt>
+                        <dd className="font-semibold">{formatMoney(c.paidAmount)}</dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="text-xs text-[var(--ink-muted)]">{t('splizer.due')}</dt>
+                        <dd className="font-semibold text-[var(--danger)]">
+                          {formatMoney(c.dueAmount)}
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="!px-3 !py-1.5 text-xs"
+                        disabled={c.dueAmount <= 0}
+                        onClick={() => pickClient(c, 'cash')}
+                      >
+                        {t('splizer.recordCash')}
+                      </Button>
+                      <Button
+                        type="button"
+                        className="!px-3 !py-1.5 text-xs"
+                        disabled={c.dueAmount <= 0}
+                        onClick={() => pickClient(c, 'stripe')}
+                      >
+                        {t('splizer.stripe')}
+                      </Button>
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm font-medium text-[var(--ink)]">{c.packageName}</p>
-                  <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <dt className="text-xs text-[var(--ink-muted)]">Total cost</dt>
-                      <dd className="font-semibold">{money(total)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-[var(--ink-muted)]">Paid</dt>
-                      <dd className="font-semibold text-[var(--success,#16a34a)]">{money(c.totalSpent)}</dd>
-                    </div>
-                    <div className="col-span-2">
-                      <dt className="text-xs text-[var(--ink-muted)]">Remaining due</dt>
-                      <dd className="font-semibold text-[var(--danger)]">{money(c.outstanding)}</dd>
-                    </div>
-                  </dl>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="!px-3 !py-1.5 text-xs"
-                      disabled={c.outstanding <= 0}
-                      onClick={() => {
-                        setCashClient(c.id);
-                        setCashAmount(String(c.outstanding || ''));
-                        setTab('cash');
-                      }}
-                    >
-                      Collect cash
-                    </Button>
-                    <Button
-                      type="button"
-                      className="!px-3 !py-1.5 text-xs"
-                      disabled={c.outstanding <= 0}
-                      onClick={() => {
-                        setStripeClient(c.id);
-                        setStripeAmount(String(c.outstanding || ''));
-                        setTab('stripe');
-                      }}
-                    >
-                      Stripe link
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                ))}
+              </div>
+              <Pagination
+                page={clientsQuery.data?.meta.page ?? page}
+                limit={clientsQuery.data?.meta.limit ?? 24}
+                total={clientsQuery.data?.meta.total ?? 0}
+                onPageChange={setPage}
+              />
+            </>
+          )}
         </div>
       ) : null}
 
       {tab === 'cash' ? (
         <div className="mt-4 max-w-md space-y-3 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]">
-          <p className="text-sm text-[var(--ink-muted)]">
-            Log on-the-ground cash received from a client. Balance and history update instantly.
-          </p>
           <div>
-            <Label>Client</Label>
-            <Select value={cashClient} onChange={(e) => setCashClient(e.target.value)}>
-              <option value="">Select client</option>
-              {snap.clients
-                .filter((c) => c.status === 'active')
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName} · due {money(c.outstanding)}
-                  </option>
-                ))}
+            <Label>{t('common.client')}</Label>
+            <Select value={cashBooking} onChange={(e) => setCashBooking(e.target.value)}>
+              <option value="">{t('splizer.chooseBooking')}</option>
+              {allForSelect.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.znCode} — {c.clientName} · {formatMoney(c.dueAmount)}
+                </option>
+              ))}
             </Select>
           </div>
           <div>
-            <Label>Amount (USD)</Label>
+            <Label>{t('splizer.method')}</Label>
+            <Select
+              value={cashMethod}
+              onChange={(e) => setCashMethod(e.target.value as CashMethod)}
+            >
+              <option value="cash">Cash</option>
+              <option value="rajhi_transfer">Rajhi transfer</option>
+              <option value="usdt_trc20">USDT TRC20</option>
+            </Select>
+          </div>
+          <div>
+            <Label>{t('common.amount')}</Label>
             <Input
               type="number"
               min={1}
               value={cashAmount}
               onChange={(e) => setCashAmount(e.target.value)}
-              placeholder="0"
             />
           </div>
           <div>
-            <Label>Note (optional)</Label>
-            <Input
-              value={cashNote}
-              onChange={(e) => setCashNote(e.target.value)}
-              placeholder="Lobby collection, Metropol…"
-            />
+            <Label>{t('common.notes')}</Label>
+            <Input value={cashNote} onChange={(e) => setCashNote(e.target.value)} />
           </div>
-          <Button type="button" loading={busy} disabled={!cashClient || !cashAmount} onClick={() => void onCollectCash()}>
-            Record cash payment
+          <Button
+            type="button"
+            loading={cashMutation.isPending}
+            disabled={!cashBooking || !cashAmount}
+            onClick={() => cashMutation.mutate()}
+          >
+            {t('splizer.recordCash')}
           </Button>
         </div>
       ) : null}
 
       {tab === 'stripe' ? (
         <div className="mt-4 max-w-md space-y-3 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]">
-          <p className="text-sm text-[var(--ink-muted)]">
-            Generate a checkout URL to send via WhatsApp or email.
-          </p>
+          <p className="text-sm text-[var(--ink-muted)]">{t('splizer.stripeHint')}</p>
           <div>
-            <Label>Client</Label>
-            <Select value={stripeClient} onChange={(e) => setStripeClient(e.target.value)}>
-              <option value="">Select client</option>
-              {snap.clients
-                .filter((c) => c.status === 'active')
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName} · {c.packageName}
-                  </option>
-                ))}
+            <Label>{t('common.client')}</Label>
+            <Select value={stripeBooking} onChange={(e) => setStripeBooking(e.target.value)}>
+              <option value="">{t('splizer.chooseBooking')}</option>
+              {allForSelect.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.znCode} — {c.clientName}
+                </option>
+              ))}
             </Select>
           </div>
           <div>
-            <Label>Amount (USD)</Label>
+            <Label>{t('common.amount')}</Label>
             <Input
               type="number"
               min={1}
@@ -240,96 +307,83 @@ export function SplizerPage() {
           </div>
           <Button
             type="button"
-            loading={busy}
-            disabled={!stripeClient || !stripeAmount}
-            onClick={() => void onStripeLink()}
+            loading={stripeMutation.isPending}
+            disabled={!stripeBooking || !stripeAmount}
+            onClick={() => stripeMutation.mutate()}
           >
-            Generate Stripe link
+            {t('splizer.makeLink')}
           </Button>
           {lastStripeUrl ? (
             <div className="rounded-lg border border-[var(--line)] bg-[var(--bg-muted)] p-3 text-sm">
-              <p className="text-xs font-semibold uppercase text-[var(--ink-muted)]">Checkout URL</p>
-              <p className="mt-1 break-all font-mono text-[var(--accent)]">{lastStripeUrl}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="!px-3 !py-1.5 text-xs"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(lastStripeUrl);
-                    push({ tone: 'success', title: 'Link copied' });
-                  }}
-                >
-                  Copy
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="!px-3 !py-1.5 text-xs"
-                  onClick={() =>
-                    window.open(
-                      `https://wa.me/?text=${encodeURIComponent(`Zeengo payment: ${lastStripeUrl}`)}`,
-                      '_blank',
-                    )
-                  }
-                >
-                  WhatsApp
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="!px-3 !py-1.5 text-xs"
-                  onClick={() => {
-                    window.location.href = `mailto:?subject=Zeengo payment link&body=${encodeURIComponent(lastStripeUrl)}`;
-                  }}
-                >
-                  Email
-                </Button>
-              </div>
+              <p className="break-all font-mono text-[var(--accent)]">{lastStripeUrl}</p>
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-2 !px-3 !py-1.5 text-xs"
+                onClick={() => {
+                  void navigator.clipboard.writeText(lastStripeUrl);
+                  push({ tone: 'success', title: t('copied') });
+                }}
+              >
+                {t('copy')}
+              </Button>
             </div>
           ) : null}
         </div>
       ) : null}
 
       {tab === 'history' ? (
-        <div className="mt-4 overflow-x-auto rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-[var(--line)] bg-[var(--bg-muted)] text-xs uppercase tracking-wide text-[var(--ink-muted)]">
-              <tr>
-                <th className="px-3 py-2.5">When</th>
-                <th className="px-3 py-2.5">Client</th>
-                <th className="px-3 py-2.5">Method</th>
-                <th className="px-3 py-2.5">Amount</th>
-                <th className="px-3 py-2.5">Note</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snap.payments.map((p) => {
-                const c = snap.clients.find((x) => x.id === p.clientId);
-                return (
-                  <tr key={p.id} className="border-t border-[var(--line)]">
-                    <td className="px-3 py-2.5 text-[var(--ink-muted)]">
-                      {ops.elapsedLabel(p.at)}
-                    </td>
-                    <td className="px-3 py-2.5 font-medium">
-                      {c?.fullName ?? '—'}
-                      <span className="block text-xs text-[var(--ink-muted)]">{c?.znCode}</span>
-                    </td>
-                    <td className="px-3 py-2.5 capitalize">{p.method}</td>
-                    <td className="px-3 py-2.5 font-semibold">{money(p.amount)}</td>
-                    <td className="px-3 py-2.5 text-[var(--ink-muted)]">
-                      {p.note}
-                      {p.stripeUrl ? (
-                        <span className="mt-0.5 block truncate font-mono text-xs text-[var(--accent)]">
-                          {p.stripeUrl}
-                        </span>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="mt-4 overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
+          {historyQuery.isLoading ? (
+            <div className="p-4">
+              <Skeleton className="h-32 w-full" />
+            </div>
+          ) : historyQuery.isError ? (
+            <div className="p-4">
+              <ErrorState
+                title={t('payments.loadFailed')}
+                onRetry={() => void historyQuery.refetch()}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead className="bg-[var(--bg-muted)] text-xs uppercase text-[var(--ink-muted)]">
+                    <tr>
+                      <th className="px-3 py-2.5 text-start">{t('payments.when')}</th>
+                      <th className="px-3 py-2.5 text-start">{t('common.client')}</th>
+                      <th className="px-3 py-2.5 text-start">{t('splizer.method')}</th>
+                      <th className="px-3 py-2.5 text-start">{t('common.amount')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(historyQuery.data?.data ?? []).map((p) => (
+                      <tr key={p.id} className="border-t border-[var(--line)]">
+                        <td className="px-3 py-2.5 text-[var(--ink-muted)]">
+                          {formatDate(p.createdAt)}
+                        </td>
+                        <td className="px-3 py-2.5 font-medium">
+                          {p.clientName}
+                          <span className="block text-xs text-[var(--ink-muted)]">{p.znCode}</span>
+                        </td>
+                        <td className="px-3 py-2.5 capitalize">{p.method}</td>
+                        <td className="px-3 py-2.5 font-semibold">{formatMoney(p.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="border-t border-[var(--line)] px-4 py-3">
+                <Pagination
+                  page={historyQuery.data?.meta.page ?? histPage}
+                  limit={historyQuery.data?.meta.limit ?? 20}
+                  total={historyQuery.data?.meta.total ?? 0}
+                  onPageChange={setHistPage}
+                />
+              </div>
+            </>
+          )}
         </div>
       ) : null}
     </PageScaffold>

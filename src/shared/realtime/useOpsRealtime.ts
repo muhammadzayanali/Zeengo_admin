@@ -24,6 +24,12 @@ export function useOpsRealtime() {
       queryClient.invalidateQueries({ queryKey });
     };
 
+    ns.on('payment.recorded', () => {
+      invalidate(['payments']);
+      invalidate(['finance']);
+      invalidate(['bookings']);
+      invalidate(['dashboard']);
+    });
     ns.on('payment.created', () => {
       invalidate(['payments']);
       invalidate(['finance']);
