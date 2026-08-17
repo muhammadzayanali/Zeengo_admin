@@ -686,12 +686,12 @@ function DriversTerminal() {
               <p className="text-sm text-[var(--ink-muted)]">{assignment.znCode}</p>
               <dl className="mt-4 space-y-3 text-sm">
                 {assignment.clientPhone ? (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-[var(--ink-muted)]" aria-hidden />
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-[var(--ink-muted)]" aria-hidden />
                     <a className="font-medium text-[var(--accent)]" href={`tel:${assignment.clientPhone}`}>
                       {assignment.clientPhone}
-                    </a>
-                  </div>
+                  </a>
+                </div>
                 ) : null}
                 <div className="flex items-start gap-2">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ink-muted)]" aria-hidden />
@@ -702,11 +702,11 @@ function DriversTerminal() {
                       {assignment.endDate ? ` → ${assignment.endDate}` : ''}
                     </p>
                     {nextStop ? (
-                      <p className="mt-1">
+                    <p className="mt-1">
                         <span className="text-[var(--ink-muted)]">{t('drivers.nextStop')} · </span>
                         {nextStop.title}
                         {nextStop.locationName ? ` — ${nextStop.locationName}` : ''}
-                      </p>
+                    </p>
                     ) : null}
                   </div>
                 </div>
@@ -721,23 +721,23 @@ function DriversTerminal() {
                 </div>
               </dl>
               {assignment.clientPhone ? (
-                <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                   <Button type="button" onClick={() => window.open(`tel:${assignment.clientPhone}`)}>
                     {t('drivers.callClient')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
                     onClick={() =>
                       window.open(
                         `https://wa.me/${assignment.clientPhone!.replace(/\D/g, '')}`,
                         '_blank',
                       )
                     }
-                  >
-                    WhatsApp
-                  </Button>
-                </div>
+                >
+                  WhatsApp
+                </Button>
+              </div>
               ) : null}
             </>
           ) : (
@@ -849,7 +849,7 @@ function DriverVehicleForm({
       </p>
       <p className="mt-1 text-sm text-[var(--ink-muted)]">{t('drivers.vehicleHint')}</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div>
+              <div>
           <Label htmlFor="vehicle-make">{t('drivers.make')}</Label>
           <Input
             id="vehicle-make"
@@ -857,7 +857,7 @@ function DriverVehicleForm({
             onChange={(e) => setMake(e.target.value)}
             placeholder="Mercedes"
           />
-        </div>
+              </div>
         <div>
           <Label htmlFor="vehicle-model">{t('drivers.model')}</Label>
           <Input
@@ -866,7 +866,7 @@ function DriverVehicleForm({
             onChange={(e) => setModel(e.target.value)}
             placeholder="V-Class"
           />
-        </div>
+            </div>
         <div>
           <Label htmlFor="vehicle-color">{t('drivers.color')}</Label>
           <Input
@@ -875,8 +875,8 @@ function DriverVehicleForm({
             onChange={(e) => setColor(e.target.value)}
             placeholder="Black"
           />
-        </div>
-        <div>
+      </div>
+          <div>
           <Label htmlFor="vehicle-year">{t('drivers.year')}</Label>
           <Input
             id="vehicle-year"
@@ -887,8 +887,8 @@ function DriverVehicleForm({
             onChange={(e) => setYear(e.target.value)}
             placeholder="2024"
           />
-        </div>
-        <div>
+          </div>
+          <div>
           <Label htmlFor="vehicle-plate">{t('drivers.plate')}</Label>
           <Input
             id="vehicle-plate"
