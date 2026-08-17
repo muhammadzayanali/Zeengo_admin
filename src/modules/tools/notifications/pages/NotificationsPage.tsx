@@ -26,6 +26,11 @@ export function NotificationsPage() {
   const [page, setPage] = useState(1);
   const [markingAll, setMarkingAll] = useState(false);
 
+  const unreadQuery = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: ({ signal }) => notificationsApi.unreadCount(signal),
+  });
+
   const notificationsQuery = useQuery({
     queryKey: ['notifications', { page, filter }],
     queryFn: ({ signal }) => notificationsApi.list({ page, limit: 20, filter }, signal),
@@ -61,7 +66,7 @@ export function NotificationsPage() {
     }
   }
 
-  const unreadOnPage = (notificationsQuery.data?.data ?? []).filter((n) => !n.isRead).length;
+  const unreadTotal = unreadQuery.data?.count ?? 0;
 
   return (
     <PageScaffold
@@ -78,7 +83,7 @@ export function NotificationsPage() {
             <StatsCard label={t('bookings.total')} value={notificationsQuery.data.meta.total} />
             <StatsCard
               label={t('notificationsPage.unread')}
-              value={unreadOnPage}
+              value={unreadTotal}
               tone="accent"
             />
           </>
@@ -117,31 +122,55 @@ export function NotificationsPage() {
       ) : (
         <>
           <div className="flex flex-col gap-3">
-            {notificationsQuery.data.data.map((notification) => (
-              <Card key={notification.id}>
+            {notificationsQuery.data.data.map((notification) => {
+              const unread = !notification.isRead;
+              return (
+              <Card
+                key={notification.id}
+                className={
+                  unread
+                    ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)]/40'
+                    : undefined
+                }
+              >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">{notification.title}</p>
-                      {!notification.isRead ? (
-                        <StatusBadge tone="accent">{t('notificationsPage.new')}</StatusBadge>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className={
+                        unread
+                          ? 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--danger)] ring-4 ring-[var(--danger)]/15'
+                          : 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-transparent'
+                      }
+                      aria-hidden={!unread}
+                      aria-label={unread ? t('notificationsPage.unread') : undefined}
+                      title={unread ? t('notificationsPage.unread') : undefined}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className={unread ? 'font-semibold' : 'font-medium text-[var(--ink-muted)]'}>
+                          {notification.title}
+                        </p>
+                        {unread ? (
+                          <StatusBadge tone="accent">{t('notificationsPage.new')}</StatusBadge>
+                        ) : null}
+                      </div>
+                      {notification.body ? (
+                        <p className="mt-1 text-sm text-[var(--ink-muted)]">{notification.body}</p>
                       ) : null}
+                      <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                        {formatDate(notification.createdAt)}
+                      </p>
                     </div>
-                    {notification.body ? (
-                      <p className="mt-1 text-sm text-[var(--ink-muted)]">{notification.body}</p>
-                    ) : null}
-                    <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                      {formatDate(notification.createdAt)}
-                    </p>
                   </div>
-                  {!notification.isRead ? (
+                  {unread ? (
                     <Button variant="secondary" onClick={() => handleMarkRead(notification.id)}>
                       {t('notificationsPage.markRead')}
                     </Button>
                   ) : null}
                 </div>
               </Card>
-            ))}
+              );
+            })}
           </div>
           <div className="mt-4">
             <Pagination

@@ -353,6 +353,7 @@ export interface AppNotification {
   body: string | null;
   type: string;
   isRead: boolean;
+  readAt?: string | null;
   createdAt: string;
 }
 
