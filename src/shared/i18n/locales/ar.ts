@@ -472,14 +472,19 @@ const ar: TranslationSchema = {
   vip: {
     title: 'زين رفيق VIP',
     description:
-      'مكتب الكونسيرج الفاخر — خدمة أولوية 100$ للرحلة، عملاء VIP وتصعيد العمليات.',
+      'مكتب الكونسيرج الفاخر — {{price}} لكل رحلة، عملاء VIP وتصعيد العمليات.',
     activate: 'تفعيل VIP',
     activateTitle: 'تفعيل لعميل',
     activateHint:
-      'رقِّ حجزاً نشطاً إلى VIP. تُضاف رسوم الكونسيرج إلى الفاتورة ويُمنح أولوية في الطابور.',
+      'رقِّ حجزاً نشطاً إلى VIP. تُضاف {{price}} إلى الفاتورة ويُمنح أولوية في الطابور.',
     activateBtn: 'إضافة VIP — {{price}}',
     selectBooking: 'حجز نشط',
     chooseBooking: 'اختر حجزاً…',
+    editPrice: 'تعديل رصيد VIP',
+    savePrice: 'حفظ الرصيد',
+    priceSaved: 'تم تحديث رصيد VIP',
+    priceSaveFailed: 'تعذر حفظ رصيد VIP',
+    perTrip: 'لكل رحلة',
     loadFailed: 'تعذر تحميل بيانات VIP.',
     vipBookings: 'حجوزات VIP',
     pendingUpgrades: 'ترقيات معلّقة',

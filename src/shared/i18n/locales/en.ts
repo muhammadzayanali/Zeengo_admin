@@ -470,14 +470,19 @@ const en = {
   vip: {
     title: 'Zeen Rafeq VIP',
     description:
-      'White-glove concierge desk — $100/trip priority service, VIP clients, and senior ops escalation.',
+      'White-glove concierge desk — {{price}}/trip priority service, VIP clients, and senior ops escalation.',
     activate: 'Activate VIP',
     activateTitle: 'Activate for a client',
     activateHint:
-      'Upgrade an active booking to VIP. Adds the concierge fee to the invoice and prioritizes the queue.',
+      'Upgrade an active booking to VIP. Adds {{price}} to the invoice and prioritizes the queue.',
     activateBtn: 'Add VIP — {{price}}',
     selectBooking: 'Active booking',
     chooseBooking: 'Select booking…',
+    editPrice: 'Edit VIP credit',
+    savePrice: 'Save credit',
+    priceSaved: 'VIP credit updated',
+    priceSaveFailed: 'Could not save VIP credit',
+    perTrip: 'per trip',
     loadFailed: 'Could not load VIP data.',
     vipBookings: 'VIP bookings',
     pendingUpgrades: 'Pending upgrades',

@@ -13,6 +13,7 @@ import {
   Ambulance,
   Plane,
   Phone,
+  Pencil,
   type LucideIcon,
 } from 'lucide-react';
 import { vipApi, vipKeys } from '../services/vip.api';
@@ -23,6 +24,7 @@ import {
   DialogShell,
   EmptyState,
   ErrorState,
+  Input,
   Label,
   PageScaffold,
   Select,
@@ -188,16 +190,34 @@ export function VipPage() {
     },
   });
 
+  const priceMutation = useMutation({
+    mutationFn: (amount: number) => vipApi.updatePrice(amount),
+    onSuccess: async (data) => {
+      qc.setQueryData(vipKeys.overview(), data);
+      push({ tone: 'success', title: t('vip.priceSaved') });
+      await qc.invalidateQueries({ queryKey: vipKeys.all });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('vip.priceSaveFailed'),
+      });
+    },
+  });
+
   const busy =
     activateMutation.isPending ||
     escalateMutation.isPending ||
     approveReqMutation.isPending ||
-    rejectReqMutation.isPending;
+    rejectReqMutation.isPending ||
+    priceMutation.isPending;
+
+  const priceLabel = formatMoney(vipPrice);
 
   return (
     <PageScaffold
       title={t('vip.title')}
-      description={t('vip.description')}
+      description={t('vip.description', { price: priceLabel })}
       filters={
         <TabBar
           value={tab}
@@ -221,8 +241,15 @@ export function VipPage() {
       {/* Activation engine — always visible */}
       <section className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]">
         <h2 className="text-sm font-semibold text-[var(--ink)]">{t('vip.activateTitle')}</h2>
-        <p className="mt-1 text-xs text-[var(--ink-muted)]">{t('vip.activateHint')}</p>
+        <p className="mt-1 text-xs text-[var(--ink-muted)]">
+          {t('vip.activateHint', { price: priceLabel })}
+        </p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
+          <VipCreditEditor
+            price={vipPrice}
+            saving={priceMutation.isPending}
+            onSave={(amount) => priceMutation.mutate(amount)}
+          />
           <div className="min-w-[220px] flex-1">
             <Label>{t('vip.selectBooking')}</Label>
             <Select
@@ -244,7 +271,7 @@ export function VipPage() {
             disabled={!activateId || busy}
             onClick={() => activateMutation.mutate(activateId)}
           >
-            {t('vip.activateBtn', { price: formatMoney(vipPrice) })}
+            {t('vip.activateBtn', { price: priceLabel })}
           </Button>
         </div>
       </section>
@@ -255,6 +282,8 @@ export function VipPage() {
           error={overviewQuery.isError}
           onRetry={() => void overviewQuery.refetch()}
           overview={overview}
+          onSavePrice={(amount) => priceMutation.mutate(amount)}
+          priceSaving={priceMutation.isPending}
           loadFailed={t('vip.loadFailed')}
         />
       ) : null}
@@ -424,11 +453,105 @@ export function VipPage() {
   );
 }
 
+function VipCreditEditor({
+  price,
+  saving,
+  onSave,
+  compact,
+}: {
+  price: number;
+  saving: boolean;
+  onSave: (amount: number) => void;
+  compact?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(price));
+
+  const parsed = Number(draft);
+  const valid = Number.isFinite(parsed) && parsed >= 0;
+
+  if (!editing) {
+    return (
+      <div className={compact ? '' : 'min-w-[140px]'}>
+        {!compact ? (
+          <Label>{t('vip.editPrice')}</Label>
+        ) : null}
+        <div className="flex items-center gap-1.5">
+          <p className="font-semibold text-[var(--ink)]">{formatMoney(price)}</p>
+          <button
+            type="button"
+            className="rounded-md p-1 text-[var(--ink-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--ink)]"
+            aria-label={t('vip.editPrice')}
+            onClick={() => {
+              setDraft(String(price));
+              setEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {!compact ? (
+          <p className="mt-0.5 text-[10px] text-[var(--ink-muted)]">{t('vip.perTrip')}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className={compact ? 'min-w-[160px]' : 'min-w-[180px]'}>
+      {!compact ? <Label htmlFor="vip-credit">{t('vip.editPrice')}</Label> : null}
+      <div className="flex items-center gap-2">
+        <Input
+          id="vip-credit"
+          type="number"
+          min={0}
+          step="1"
+          className="w-28"
+          value={draft}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && valid) {
+              onSave(parsed);
+              setEditing(false);
+            }
+            if (e.key === 'Escape') setEditing(false);
+          }}
+        />
+        <Button
+          type="button"
+          className="!px-3 !py-1.5 text-xs"
+          disabled={!valid || saving}
+          loading={saving}
+          onClick={() => {
+            onSave(parsed);
+            setEditing(false);
+          }}
+        >
+          {t('save')}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="!px-2 !py-1.5 text-xs"
+          disabled={saving}
+          onClick={() => setEditing(false)}
+        >
+          {t('cancel')}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function OverviewPanel({
   loading,
   error,
   onRetry,
   overview,
+  onSavePrice,
+  priceSaving,
   loadFailed,
 }: {
   loading: boolean;
@@ -443,6 +566,8 @@ function OverviewPanel({
     slaMinutes: number;
     inclusions: string[];
   };
+  onSavePrice: (amount: number) => void;
+  priceSaving: boolean;
   loadFailed: string;
 }) {
   const { t } = useTranslation();
@@ -490,9 +615,12 @@ function OverviewPanel({
           <div className="flex flex-wrap gap-4 text-sm">
             <div>
               <p className="text-xs text-[var(--ink-muted)]">{t('vip.metricPrice')}</p>
-              <p className="font-semibold text-[var(--ink)]">
-                {formatMoney(overview.vipPrice)}
-              </p>
+              <VipCreditEditor
+                price={overview.vipPrice}
+                saving={priceSaving}
+                onSave={onSavePrice}
+                compact
+              />
             </div>
             <div>
               <p className="text-xs text-[var(--ink-muted)]">{t('vip.metricServices')}</p>
@@ -712,55 +840,55 @@ function ClientsPanel({
     <div className="space-y-3">
       {clients.map((c) => {
         const unassigned = c.isAssigned === false;
-        return (
+          return (
           <article
             key={c.bookingId}
-            className={
-              unassigned
-                ? 'rounded-[var(--radius)] border-2 border-[var(--danger)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]'
-                : 'rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]'
-            }
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
+              className={
+                unassigned
+                  ? 'rounded-[var(--radius)] border-2 border-[var(--danger)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]'
+                  : 'rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]'
+              }
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold text-[var(--ink)]">{c.clientName}</p>
-                  <StatusBadge tone="accent">VIP</StatusBadge>
+                    <StatusBadge tone="accent">VIP</StatusBadge>
                   {unassigned ? (
                     <StatusBadge tone="danger">{t('vip.unassigned')}</StatusBadge>
                   ) : null}
-                </div>
+                  </div>
                 <p className="mt-1 text-sm text-[var(--ink-muted)]">
                   {c.znCode}
                   {c.packageName ? ` · ${c.packageName}` : ''}
                   {c.hotelName ? ` · ${c.hotelName}` : ''}
-                </p>
-                <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--ink-muted)]">
                   {t('vip.specialNotes')}:{' '}
                   {c.specialNotes || t('vip.preferencesDefault')}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => onOpenFile(c.bookingId)}
                 >
                   {t('vip.conciergeFile')}
-                </Button>
-                <Button
-                  type="button"
+                  </Button>
+                  <Button
+                    type="button"
                   variant="danger"
                   disabled={busy}
                   onClick={() => onEscalate(c.bookingId)}
                 >
                   {t('vip.escalate')}
-                </Button>
+                  </Button>
               </div>
             </div>
           </article>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
   );
 }

@@ -40,6 +40,13 @@ export const vipApi = {
       data: { bookingId },
     });
   },
+  updatePrice(amount: number) {
+    return apiRequest<VipOverview>({
+      method: 'PUT',
+      url: '/vip/price',
+      data: { amount },
+    });
+  },
   escalate(bookingId: string, note?: string) {
     return apiRequest<VipEscalateResult>({
       method: 'POST',
