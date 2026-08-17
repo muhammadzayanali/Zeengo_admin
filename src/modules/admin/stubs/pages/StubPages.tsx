@@ -31,14 +31,3 @@ export function RolesPage() {
   );
 }
 
-export function EmailPage() {
-  const { t } = useTranslation();
-  return (
-    <StubPage
-      title={t('nav.email')}
-      description="Template library and delivery log for itinerary, receipt, and alert emails."
-      ctaTo="/ai"
-      ctaLabel="Open Ops Agent drafts"
-    />
-  );
-}

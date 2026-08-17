@@ -697,3 +697,54 @@ export interface AiEodReportResult {
   summary: Record<string, number>;
   source: 'stub' | 'claude';
 }
+
+export type EmailTemplateId =
+  | 'booking_confirmation'
+  | 'itinerary_change'
+  | 'sos_followup'
+  | 'invoice_receipt';
+
+export interface EmailTemplate {
+  id: EmailTemplateId | string;
+  name: string;
+}
+
+export interface EmailRecipient {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  clientEmail: string | null;
+  clientPhone: string | null;
+  packageName: string | null;
+  arrivalDate: string | null;
+  departureDate: string | null;
+  isVip: boolean;
+  status: string;
+}
+
+export interface EmailPreview {
+  to: string | null;
+  toName: string;
+  template: string;
+  templateName: string;
+  subject: string;
+  body: string;
+  bookingId: string;
+  znCode: string;
+}
+
+export interface EmailLogItem {
+  id: string;
+  bookingId: string | null;
+  znCode: string | null;
+  toEmail: string;
+  toName: string | null;
+  template: string;
+  templateName: string;
+  subject: string;
+  body: string;
+  status: string;
+  error: string | null;
+  sentByName: string | null;
+  createdAt: string;
+}
