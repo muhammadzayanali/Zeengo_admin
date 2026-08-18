@@ -479,8 +479,8 @@ export function VendorsPage() {
             />
           </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
-            <Button
-              type="button"
+          <Button
+            type="button"
               variant="secondary"
               onClick={() => setAddOpen(false)}
               disabled={createMutation.isPending}
@@ -584,8 +584,8 @@ export function VendorsPage() {
                 onClick={() => assignMutation.mutate()}
               >
                 {t('vendors.confirmAssign')}
-              </Button>
-            </div>
+          </Button>
+        </div>
           </div>
         ) : null}
       </DialogShell>

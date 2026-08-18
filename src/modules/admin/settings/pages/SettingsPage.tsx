@@ -66,7 +66,10 @@ export function SettingsPage() {
     onSuccess: async () => {
       push({ tone: 'success', title: t('settingsPage.saved') });
       setEditKey(null);
-      await qc.invalidateQueries({ queryKey: ['settings'] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['settings'] }),
+        qc.invalidateQueries({ queryKey: ['vip'] }),
+      ]);
     },
     onError: (err) => {
       push({

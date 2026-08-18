@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { getAccessToken } from '@/shared/api/client';
+import { getAccessToken, baseUrl } from '@/shared/api/client';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { useToast } from '@/shared/ui';
 
@@ -15,7 +15,7 @@ export function useOpsRealtime() {
     const token = getAccessToken();
     if (!token) return;
 
-    const ns = io('http://localhost:3000/ws', {
+    const ns = io(`${baseUrl}/ws`, {
       transports: ['websocket', 'polling'],
       auth: { token },
     });
