@@ -122,14 +122,6 @@ const RussiaChatbotPage = lazy(() =>
     default: m.RussiaChatbotPage,
   })),
 );
-const AiParserPage = lazy(() =>
-  import('@/features/ai/pages/AiParserPage').then((m) => ({ default: m.AiParserPage })),
-);
-const RussiaChatbotPage = lazy(() =>
-  import('@/features/ai/pages/RussiaChatbotPage').then((m) => ({
-    default: m.RussiaChatbotPage,
-  })),
-);
 const OperationsRoomPage = lazy(() =>
   import('@/modules/command/ops-room/pages/OperationsRoomPage').then((m) => ({
     default: m.OperationsRoomPage,
