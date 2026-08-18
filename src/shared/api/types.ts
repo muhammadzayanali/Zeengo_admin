@@ -58,8 +58,51 @@ export interface DashboardSummary {
   driversInField: number;
   revenueToday: number;
   todaysItinerary: number;
+  itineraryProgress?: number;
   unassignedClients: number;
   opsQueue: number;
+  activeSos?: number;
+  pendingEdits?: number;
+}
+
+export interface UrgentAlert {
+  type: string;
+  severity: 'high' | 'medium' | 'low';
+  title: string;
+  message: string;
+  entityId: string | null;
+  createdAt: string;
+  znCode?: string | null;
+  clientName?: string | null;
+}
+
+export interface DashboardUnassignedClient {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  packageName: string | null;
+  arrivalDate: string | null;
+}
+
+export interface DashboardDriverCard {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  status: string;
+  vehicleMake: string | null;
+  vehicleModel: string | null;
+  plateNumber: string | null;
+  rating: number;
+  activeAssignmentZn: string | null;
+}
+
+export interface DashboardOverview {
+  summary: DashboardSummary;
+  alerts: UrgentAlert[];
+  unassigned: DashboardUnassignedClient[];
+  drivers: DashboardDriverCard[];
+  generatedAt: string;
+  cacheTtlSeconds: number;
 }
 
 export interface Booking {
@@ -115,7 +158,7 @@ export interface Package {
   slug: string;
   pricePerPerson: number;
   minPersons: number;
-  durationDays: number;
+  durationDays: number | null;
   description: string | null;
   inclusions: string[];
   isActive: boolean;
@@ -158,42 +201,127 @@ export interface Task {
   priority: 'urgent' | 'normal';
   status: 'open' | 'done';
   bookingId: string | null;
+  znCode?: string | null;
   assigneeId: string | null;
+  assigneeName?: string | null;
   dueDate: string | null;
   createdAt: string;
 }
 
+export type VendorType =
+  | 'hotel'
+  | 'restaurant'
+  | 'guide'
+  | 'bus'
+  | 'activity'
+  | 'driver';
+
+export type VendorPaymentTerms = 'bank_transfer' | 'cash' | 'voucher';
+
+export type VendorBookingStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'completed'
+  | 'cancelled';
+
 export interface Vendor {
   id: string;
   name: string;
-  type: string;
+  type: VendorType | string;
   city: string | null;
   contactName: string | null;
   phone: string | null;
   email: string | null;
   commissionPct: number | null;
+  paymentTerms?: string | null;
+  cancellationPolicy?: string | null;
+  notes?: string | null;
   isActive: boolean;
+  activeBookingsCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface VendorBookingRow {
+  id: string;
+  vendorId: string;
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  itineraryItemId: string | null;
+  amount: number | null;
+  commissionAmount: number | null;
+  serviceDate: string | null;
+  pax: number | null;
+  details: string | null;
+  voucherCode: string | null;
+  voucherSentAt: string | null;
+  status: VendorBookingStatus | string;
+  createdAt: string;
+}
+
+export interface VendorDetail extends Vendor {
+  finance: VendorFinance;
+  bookings: VendorBookingRow[];
+}
+
+export interface VendorStats {
+  total: number;
+  hotel: number;
+  restaurant: number;
+  guide: number;
+  bus: number;
+  activity: number;
+  driver: number;
+}
+
+export interface VendorVoucher {
+  vendorBookingId: string;
+  voucherCode: string;
+  vendorName: string;
+  vendorEmail: string | null;
+  znCode: string;
+  clientName: string;
+  serviceDate: string | null;
+  pax: number | null;
+  details: string | null;
+  email: { to: string | null; subject: string; body: string };
 }
 
 export interface EditRequest {
   id: string;
   bookingId: string;
   znCode?: string | null;
+  clientName?: string | null;
+  clientPhone?: string | null;
   type: string;
   status: 'pending' | 'approved' | 'rejected';
   originalValue: string | null;
   requestedValue: string | null;
   reason: string | null;
+  reviewNotes?: string | null;
+  reviewedBy?: string | null;
+  reviewedByName?: string | null;
+  reviewedAt?: string | null;
+  targetDate?: string | null;
+  arrivalDate?: string | null;
+  departureDate?: string | null;
   createdAt: string;
 }
 
 export interface SosAlert {
   id: string;
   bookingId: string | null;
+  znCode?: string | null;
+  clientName?: string | null;
+  clientPhone?: string | null;
   message: string | null;
   status: 'active' | 'resolved';
   lat: number | null;
   lng: number | null;
+  resolvedBy?: string | null;
+  resolvedByName?: string | null;
+  resolvedAt?: string | null;
   createdAt: string;
 }
 
@@ -214,6 +342,8 @@ export interface ChatMessage {
   createdAt: string;
   senderType?: string;
   senderName?: string | null;
+  senderStaffId?: string | null;
+  senderClientId?: string | null;
   bodyTranslated?: Record<string, string>;
 }
 
@@ -223,6 +353,7 @@ export interface AppNotification {
   body: string | null;
   type: string;
   isRead: boolean;
+  readAt?: string | null;
   createdAt: string;
 }
 
@@ -248,6 +379,7 @@ export interface ItineraryItem {
 export interface DailyOperationItem extends ItineraryItem {
   znCode: string;
   clientName: string;
+  driverName?: string | null;
 }
 
 export interface DailyOperationsDay {
@@ -284,15 +416,6 @@ export interface BookingStats {
   completed: number;
   cancelled: number;
   revenueTotal: number;
-}
-
-export interface UrgentAlert {
-  type: string;
-  severity: 'high' | 'medium' | 'low';
-  title: string;
-  message: string;
-  entityId: string | null;
-  createdAt: string;
 }
 
 export interface EodReport {
@@ -346,6 +469,18 @@ export interface DriverUserSummary {
   avatarUrl: string | null;
 }
 
+export type DriverDutyStatus = 'available' | 'en_route' | 'resting' | 'off_duty';
+
+export interface DriverActiveAssignment {
+  id: string;
+  bookingId: string;
+  znCode: string | null;
+  clientName: string | null;
+  clientPhone: string | null;
+  startDate: string;
+  endDate: string | null;
+}
+
 export interface DriverListItem {
   id: string;
   userId: string;
@@ -356,14 +491,16 @@ export interface DriverListItem {
   plateNumber: string | null;
   whatsapp: string | null;
   rating: string;
+  reviewsCount: number;
   tripsCount: number;
-  status: string;
+  status: DriverDutyStatus | string;
   lastLat: number | null;
   lastLng: number | null;
   lastGpsAt: string | null;
   createdAt: string;
   updatedAt: string;
   user: DriverUserSummary;
+  activeAssignment?: DriverActiveAssignment | null;
 }
 
 export interface DriverDetail extends DriverListItem {
@@ -375,12 +512,33 @@ export interface DriverAssignment {
   bookingId: string;
   znCode: string | null;
   clientName: string | null;
+  clientPhone?: string | null;
   driverId: string;
   startDate: string;
   endDate: string | null;
   status: string;
   assignedBy: string;
   createdAt: string;
+}
+
+export interface UnassignedBooking {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  clientPhone: string | null;
+  packageName: string | null;
+  arrivalDate: string | null;
+  departureDate: string | null;
+  isVip: boolean;
+}
+
+export interface DriverStats {
+  total: number;
+  available: number;
+  enRoute: number;
+  resting: number;
+  offDuty: number;
+  unassignedBookings: number;
 }
 
 export interface DriverTrip {
@@ -407,6 +565,27 @@ export interface DriverSchedule {
   items: DailyOperationItem[];
 }
 
+export interface DriverReview {
+  id: string;
+  bookingId: string;
+  znCode: string;
+  clientId: string;
+  clientName: string;
+  driverId: string;
+  driverName: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DriverReviewsStats {
+  driverId: string | null;
+  average: number;
+  reviewsCount: number;
+  breakdown: Record<1 | 2 | 3 | 4 | 5, number>;
+}
+
 export interface VendorFinance {
   vendorId: string;
   vendorName: string;
@@ -417,10 +596,22 @@ export interface VendorFinance {
   completedAmount: number;
 }
 
+export interface VipOpsManager {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  email: string;
+}
+
 export interface VipOverview {
   totalVipBookings: number;
   pendingUpgradeRequests: number;
   vipRevenue: number;
+  vipPrice: number;
+  hotline: string;
+  slaMinutes: number;
+  inclusions: string[];
+  opsManagers?: VipOpsManager[];
 }
 
 export interface VipClient {
@@ -428,9 +619,44 @@ export interface VipClient {
   znCode: string;
   clientId: string;
   clientName: string;
+  clientPhone?: string | null;
+  packageName?: string | null;
+  hotelName?: string | null;
+  specialNotes?: string | null;
   isVip: boolean;
+  isAssigned?: boolean;
+  driverName?: string | null;
   vipActivatedAt: string | null;
   totalAmount: number;
+  status?: string;
+  arrivalDate?: string | null;
+  departureDate?: string | null;
+  preferredLang?: string | null;
+}
+
+export interface VipCandidate {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  packageName: string | null;
+  totalAmount: number;
+}
+
+export interface VipClientFile extends VipClient {
+  notes: Array<{
+    id: string;
+    body: string;
+    authorName: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface VipEscalateResult {
+  bookingId: string;
+  znCode: string;
+  taskId: string | null;
+  conversationId: string | null;
+  notified: boolean;
 }
 
 export interface Setting {
@@ -481,4 +707,55 @@ export interface AiEodReportResult {
   content: string;
   summary: Record<string, number>;
   source: 'stub' | 'claude';
+}
+
+export type EmailTemplateId =
+  | 'booking_confirmation'
+  | 'itinerary_change'
+  | 'sos_followup'
+  | 'invoice_receipt';
+
+export interface EmailTemplate {
+  id: EmailTemplateId | string;
+  name: string;
+}
+
+export interface EmailRecipient {
+  bookingId: string;
+  znCode: string;
+  clientName: string;
+  clientEmail: string | null;
+  clientPhone: string | null;
+  packageName: string | null;
+  arrivalDate: string | null;
+  departureDate: string | null;
+  isVip: boolean;
+  status: string;
+}
+
+export interface EmailPreview {
+  to: string | null;
+  toName: string;
+  template: string;
+  templateName: string;
+  subject: string;
+  body: string;
+  bookingId: string;
+  znCode: string;
+}
+
+export interface EmailLogItem {
+  id: string;
+  bookingId: string | null;
+  znCode: string | null;
+  toEmail: string;
+  toName: string | null;
+  template: string;
+  templateName: string;
+  subject: string;
+  body: string;
+  status: string;
+  error: string | null;
+  sentByName: string | null;
+  createdAt: string;
 }

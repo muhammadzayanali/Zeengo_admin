@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { getAccessToken } from '@/shared/api/client';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { getAccessToken, baseUrl } from '@/shared/api/client';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { useToast } from '@/shared/ui';
 
 export function useOpsRealtime() {
@@ -15,7 +15,7 @@ export function useOpsRealtime() {
     const token = getAccessToken();
     if (!token) return;
 
-    const ns = io('http://localhost:3000/ws', {
+    const ns = io(`${baseUrl}/ws`, {
       transports: ['websocket', 'polling'],
       auth: { token },
     });
@@ -24,6 +24,12 @@ export function useOpsRealtime() {
       queryClient.invalidateQueries({ queryKey });
     };
 
+    ns.on('payment.recorded', () => {
+      invalidate(['payments']);
+      invalidate(['finance']);
+      invalidate(['bookings']);
+      invalidate(['dashboard']);
+    });
     ns.on('payment.created', () => {
       invalidate(['payments']);
       invalidate(['finance']);
@@ -41,13 +47,34 @@ export function useOpsRealtime() {
       invalidate(['dashboard']);
       push({ tone: 'error', title: 'New SOS alert' });
     });
+    ns.on('sos.resolved', () => {
+      invalidate(['sos']);
+      invalidate(['dashboard']);
+    });
     ns.on('message.new', () => invalidate(['chat']));
     ns.on('task.updated', () => {
       invalidate(['tasks']);
       invalidate(['dashboard']);
+      invalidate(['daily-operations']);
+    });
+    ns.on('booking.created', () => {
+      invalidate(['bookings']);
+      invalidate(['dashboard']);
+    });
+    ns.on('driver.updated', () => {
+      invalidate(['drivers']);
+      invalidate(['dashboard']);
     });
     ns.on('notification.created', () => invalidate(['notifications']));
     ns.on('notification.new', () => invalidate(['notifications']));
+    ns.on('edit_request.created', () => {
+      invalidate(['edit-requests']);
+      invalidate(['dashboard']);
+    });
+    ns.on('edit_request.updated', () => {
+      invalidate(['edit-requests']);
+      invalidate(['dashboard']);
+    });
 
     return () => {
       ns.disconnect();

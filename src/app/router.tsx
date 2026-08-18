@@ -5,104 +5,122 @@ import { AppShell } from './layouts/AppShell';
 import { Skeleton } from '@/shared/ui';
 
 const LoginPage = lazy(() =>
-  import('@/features/auth/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+  import('@/modules/auth/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 );
 const DashboardPage = lazy(() =>
-  import('@/features/dashboard/pages/DashboardPage').then((m) => ({
+  import('@/modules/command/dashboard/pages/DashboardPage').then((m) => ({
     default: m.DashboardPage,
   })),
 );
 const BookingsPage = lazy(() =>
-  import('@/features/bookings/pages/BookingsPage').then((m) => ({
+  import('@/modules/clients/bookings/pages/BookingsPage').then((m) => ({
     default: m.BookingsPage,
   })),
 );
 const BookingDetailPage = lazy(() =>
-  import('@/features/bookings/pages/BookingDetailPage').then((m) => ({
+  import('@/modules/clients/bookings/pages/BookingDetailPage').then((m) => ({
     default: m.BookingDetailPage,
   })),
 );
 const DailyOpsPage = lazy(() =>
-  import('@/features/itineraries/pages/DailyOpsPage').then((m) => ({
+  import('@/modules/command/itineraries/pages/DailyOpsPage').then((m) => ({
     default: m.DailyOpsPage,
   })),
 );
 const ClientsPage = lazy(() =>
-  import('@/features/clients/pages/ClientsPage').then((m) => ({
+  import('@/modules/clients/pages/ClientsPage').then((m) => ({
     default: m.ClientsPage,
   })),
 );
+const NewClientPage = lazy(() =>
+  import('@/modules/clients/pages/NewClientPage').then((m) => ({
+    default: m.NewClientPage,
+  })),
+);
+const ClientDetailPage = lazy(() =>
+  import('@/modules/clients/pages/ClientDetailPage').then((m) => ({
+    default: m.ClientDetailPage,
+  })),
+);
 const PaymentsPage = lazy(() =>
-  import('@/features/payments/pages/PaymentsPage').then((m) => ({
+  import('@/modules/finance/payments/pages/PaymentsPage').then((m) => ({
     default: m.PaymentsPage,
   })),
 );
 const SplizerPage = lazy(() =>
-  import('@/features/payments/pages/SplizerPage').then((m) => ({
+  import('@/modules/finance/payments/pages/SplizerPage').then((m) => ({
     default: m.SplizerPage,
   })),
 );
 const FinancePage = lazy(() =>
-  import('@/features/finance/pages/FinancePage').then((m) => ({
+  import('@/modules/finance/pages/FinancePage').then((m) => ({
     default: m.FinancePage,
   })),
 );
 const DriversPage = lazy(() =>
-  import('@/features/drivers/pages/DriversPage').then((m) => ({
+  import('@/modules/fleet/drivers/pages/DriversPage').then((m) => ({
     default: m.DriversPage,
   })),
 );
 const DriverMePage = lazy(() =>
-  import('@/features/drivers/pages/DriverMePage').then((m) => ({
+  import('@/modules/fleet/drivers/pages/DriverMePage').then((m) => ({
     default: m.DriverMePage,
   })),
 );
 const TasksPage = lazy(() =>
-  import('@/features/tasks/pages/TasksPage').then((m) => ({
+  import('@/modules/command/tasks/pages/TasksPage').then((m) => ({
     default: m.TasksPage,
   })),
 );
 const VendorsPage = lazy(() =>
-  import('@/features/vendors/pages/VendorsPage').then((m) => ({
+  import('@/modules/fleet/vendors/pages/VendorsPage').then((m) => ({
     default: m.VendorsPage,
   })),
 );
 const EditRequestsPage = lazy(() =>
-  import('@/features/edit-requests/pages/EditRequestsPage').then((m) => ({
+  import('@/modules/clients/edit-requests/pages/EditRequestsPage').then((m) => ({
     default: m.EditRequestsPage,
   })),
 );
 const VipPage = lazy(() =>
-  import('@/features/vip/pages/VipPage').then((m) => ({ default: m.VipPage })),
+  import('@/modules/clients/vip/pages/VipPage').then((m) => ({ default: m.VipPage })),
 );
 const SosPage = lazy(() =>
-  import('@/features/sos/pages/SosPage').then((m) => ({ default: m.SosPage })),
+  import('@/modules/command/sos/pages/SosPage').then((m) => ({ default: m.SosPage })),
 );
 const ChatPage = lazy(() =>
-  import('@/features/chat/pages/ChatPage').then((m) => ({ default: m.ChatPage })),
+  import('@/modules/tools/chat/pages/ChatPage').then((m) => ({ default: m.ChatPage })),
 );
 const NotificationsPage = lazy(() =>
-  import('@/features/notifications/pages/NotificationsPage').then((m) => ({
+  import('@/modules/tools/notifications/pages/NotificationsPage').then((m) => ({
     default: m.NotificationsPage,
   })),
 );
 const PackagesPage = lazy(() =>
-  import('@/features/packages/pages/PackagesPage').then((m) => ({
+  import('@/modules/finance/packages/pages/PackagesPage').then((m) => ({
     default: m.PackagesPage,
   })),
 );
 const UsersPage = lazy(() =>
-  import('@/features/users/pages/UsersPage').then((m) => ({
+  import('@/modules/admin/users/pages/UsersPage').then((m) => ({
     default: m.UsersPage,
   })),
 );
 const SettingsPage = lazy(() =>
-  import('@/features/settings/pages/SettingsPage').then((m) => ({
+  import('@/modules/admin/settings/pages/SettingsPage').then((m) => ({
     default: m.SettingsPage,
   })),
 );
 const AiPage = lazy(() =>
-  import('@/features/ai/pages/AiPage').then((m) => ({ default: m.AiPage })),
+  import('@/modules/tools/ai/pages/AiPage').then((m) => ({ default: m.AiPage })),
+);
+const AiParserPage = lazy(() =>
+  import('@/modules/tools/ai/pages/AiParserPage').then((m) => ({ default: m.AiParserPage })),
+);
+const RussiaChatbotPage = lazy(() =>
+  import('@/modules/tools/ai/pages/RussiaChatbotPage').then((m) => ({
+    default: m.RussiaChatbotPage,
+  })),
 );
 const AiParserPage = lazy(() =>
   import('@/features/ai/pages/AiParserPage').then((m) => ({ default: m.AiParserPage })),
@@ -113,18 +131,18 @@ const RussiaChatbotPage = lazy(() =>
   })),
 );
 const OperationsRoomPage = lazy(() =>
-  import('@/features/ops-room/pages/OperationsRoomPage').then((m) => ({
+  import('@/modules/command/ops-room/pages/OperationsRoomPage').then((m) => ({
     default: m.OperationsRoomPage,
   })),
 );
 const GuidesPage = lazy(() =>
-  import('@/features/stubs/pages/StubPages').then((m) => ({ default: m.GuidesPage })),
+  import('@/modules/fleet/guides/pages/GuidesPage').then((m) => ({ default: m.GuidesPage })),
 );
 const RolesPage = lazy(() =>
-  import('@/features/stubs/pages/StubPages').then((m) => ({ default: m.RolesPage })),
+  import('@/modules/admin/roles/pages/RolesPage').then((m) => ({ default: m.RolesPage })),
 );
 const EmailPage = lazy(() =>
-  import('@/features/tools/pages/EmailPage').then((m) => ({ default: m.EmailPage })),
+  import('@/modules/tools/email/pages/EmailPage').then((m) => ({ default: m.EmailPage })),
 );
 
 function Fallback() {
@@ -191,6 +209,22 @@ export function AppRouter() {
             element={
               <L>
                 <ClientsPage />
+              </L>
+            }
+          />
+          <Route
+            path="/clients/new"
+            element={
+              <L>
+                <NewClientPage />
+              </L>
+            }
+          />
+          <Route
+            path="/clients/:id"
+            element={
+              <L>
+                <ClientDetailPage />
               </L>
             }
           />

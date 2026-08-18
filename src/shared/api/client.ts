@@ -1,5 +1,8 @@
 import axios, { type AxiosRequestConfig } from 'axios';
+import { baseUrl } from './baseUrl';
 import type { ApiErrorBody, ApiSuccess, PageMeta } from './types';
+
+export { baseUrl, getApiBaseUrl, getWsUrl } from './baseUrl';
 
 const ACCESS_KEY = 'zeengo_access_token';
 const REFRESH_KEY = 'zeengo_refresh_token';
@@ -38,7 +41,7 @@ export class ApiClientError extends Error {
 }
 
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: `${baseUrl}/api/v1`,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -55,7 +58,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
   try {
     const { data } = await axios.post<ApiSuccess<{ accessToken: string; refreshToken: string }>>(
-      `${import.meta.env.VITE_API_URL || '/api/v1'}/auth/refresh`,
+      `${baseUrl}/api/v1/auth/refresh`,
       { refreshToken },
     );
     if (data.success) {

@@ -2,11 +2,11 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { TopHeader } from '@/app/layouts/TopHeader';
 import { Sidebar } from '@/app/layouts/Sidebar';
-import { notificationsApi } from '@/features/notifications/services/notifications.api';
-import { sosApi } from '@/features/sos/services/sos.api';
+import { notificationsApi } from '@/modules/tools/notifications/services/notifications.api';
+import { sosApi } from '@/modules/command/sos/services/sos.api';
 import { useOpsRealtime } from '@/shared/realtime/useOpsRealtime';
 import { cn } from '@/shared/lib/cn';
 
