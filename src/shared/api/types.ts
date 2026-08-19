@@ -451,7 +451,9 @@ export interface RevenueSeriesPoint {
 }
 
 export interface RevenueSeries {
-  days: number;
+  days?: number;
+  grain: 'day' | 'month';
+  range: '7d' | 'month' | 'year';
   points: RevenueSeriesPoint[];
 }
 

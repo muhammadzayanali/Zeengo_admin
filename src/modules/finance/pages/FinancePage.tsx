@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { financeApi } from '../services/finance.api';
+import { financeApi, type ChartRange } from '../services/finance.api';
 import { paymentsApi } from '../payments/services/payments.api';
 import {
   EmptyState,
@@ -33,39 +33,69 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'accent'
   return 'default';
 }
 
-function RevenueChart({ points }: { points: RevenueSeriesPoint[] }) {
-  const max = Math.max(1, ...points.map((p) => p.total));
+function parseDateKey(key: string) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function formatBucketLabel(key: string, locale: string, grain: 'day' | 'month', range: ChartRange) {
+  const d = parseDateKey(key);
+  if (grain === 'month' || range === 'year') {
+    return d.toLocaleDateString(locale, { month: 'short' });
+  }
+  if (range === 'month') {
+    return String(d.getDate());
+  }
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+}
+
+function RevenueChart({
+  points,
+  grain,
+  range,
+  locale,
+}: {
+  points: RevenueSeriesPoint[];
+  grain: 'day' | 'month';
+  range: ChartRange;
+  locale: string;
+}) {
+  const max = Math.max(1, ...points.map((p) => Math.max(p.stripe, p.cash)));
+
   return (
-    <div className="flex h-48 items-end gap-1.5">
-      {points.map((p) => {
-        const stripeH = (p.stripe / max) * 100;
-        const cashH = (p.cash / max) * 100;
-        const label = p.date.slice(5);
-        return (
-          <div key={p.date} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-            <div className="flex h-40 w-full flex-col justify-end overflow-hidden rounded-t-md bg-[var(--bg-muted)]">
-              <div
-                className="w-full bg-[var(--accent)]"
-                style={{ height: `${stripeH}%` }}
-                title={`Stripe ${formatMoney(p.stripe)}`}
-              />
-              <div
-                className="w-full bg-[var(--success)]"
-                style={{ height: `${cashH}%` }}
-                title={`Cash ${formatMoney(p.cash)}`}
-              />
+    <div className="w-full">
+      <div className="flex h-52 w-full items-stretch gap-2 sm:gap-3">
+        {points.map((p) => {
+          const stripeH = p.stripe > 0 ? Math.max(10, (p.stripe / max) * 100) : 0;
+          const cashH = p.cash > 0 ? Math.max(10, (p.cash / max) * 100) : 0;
+          return (
+            <div key={p.date} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+              <div className="flex h-40 w-full items-end justify-center gap-1 rounded-t-md bg-[var(--bg-muted)] px-[12%]">
+                <div
+                  className="min-w-0 flex-1 rounded-t-md bg-[var(--accent)]"
+                  style={{ height: `${stripeH}%` }}
+                  title={`Stripe ${formatMoney(p.stripe)}`}
+                />
+                <div
+                  className="min-w-0 flex-1 rounded-t-md bg-[var(--success)]"
+                  style={{ height: `${cashH}%` }}
+                  title={`Cash ${formatMoney(p.cash)}`}
+                />
+              </div>
+              <span className="w-full truncate text-center text-[10px] leading-tight text-[var(--ink-muted)] sm:text-[11px]">
+                {formatBucketLabel(p.date, locale, grain, range)}
+              </span>
             </div>
-            <span className="truncate text-[10px] text-[var(--ink-muted)]">{label}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 export function FinancePage() {
-  const { t } = useTranslation();
-  const [days, setDays] = useState(7);
+  const { t, i18n } = useTranslation();
+  const [range, setRange] = useState<ChartRange>('7d');
   const [status, setStatus] = useState('');
   const [method, setMethod] = useState('');
   const [page, setPage] = useState(1);
@@ -76,8 +106,8 @@ export function FinancePage() {
   });
 
   const seriesQuery = useQuery({
-    queryKey: ['finance', 'series', days],
-    queryFn: ({ signal }) => financeApi.revenueSeries(days, signal),
+    queryKey: ['finance', 'series', range],
+    queryFn: ({ signal }) => financeApi.revenueChart(range, signal),
   });
 
   const ledgerQuery = useQuery({
@@ -142,13 +172,13 @@ export function FinancePage() {
             <p className="text-xs text-[var(--ink-muted)]">{t('finance.chartHint')}</p>
           </div>
           <Select
-            className="max-w-[160px]"
-            value={String(days)}
-            onChange={(e) => setDays(Number(e.target.value))}
+            className="max-w-[180px]"
+            value={range}
+            onChange={(e) => setRange(e.target.value as ChartRange)}
           >
-            <option value={7}>{t('finance.last7')}</option>
-            <option value={30}>{t('finance.last30')}</option>
-            <option value={90}>{t('finance.last90')}</option>
+            <option value="7d">{t('finance.last7')}</option>
+            <option value="month">{t('finance.thisMonth')}</option>
+            <option value="year">{t('finance.thisYear')}</option>
           </Select>
         </div>
         <div className="mb-3 flex flex-wrap gap-3 text-xs text-[var(--ink-muted)]">
@@ -163,21 +193,33 @@ export function FinancePage() {
           <Skeleton className="h-48 w-full" />
         ) : seriesQuery.isError ? (
           <ErrorState title={t('finance.revenueFailed')} onRetry={() => void seriesQuery.refetch()} />
-        ) : !seriesQuery.data?.points.some((p) => p.total > 0) ? (
+        ) : !seriesQuery.data ? (
           <EmptyState title={t('finance.noRevenue')} />
         ) : (
-            <div className="overflow-x-auto pb-1">
-          <RevenueChart points={seriesQuery.data.points} />
-            </div>
+          <>
+            <RevenueChart
+              points={seriesQuery.data.points}
+              grain={seriesQuery.data.grain}
+              range={seriesQuery.data.range}
+              locale={i18n.language?.startsWith('ar') ? 'ar' : 'en-GB'}
+            />
+            <p className="mt-3 text-xs text-[var(--ink-muted)]">
+              {t('finance.total', {
+                amount: formatMoney(
+                  seriesQuery.data.points.reduce((sum, p) => sum + p.total, 0),
+                ),
+              })}
+            </p>
+          </>
         )}
       </section>
 
       <section className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
           <h2 className="text-sm font-semibold">{t('finance.allPayments')}</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-nowrap items-center gap-2">
             <Select
-              className="max-w-[150px]"
+              className="!w-auto min-w-[140px] shrink-0"
               value={status}
               onChange={(e) => {
                 setStatus(e.target.value);
@@ -193,7 +235,7 @@ export function FinancePage() {
               <option value="expired">{t('finance.expired')}</option>
             </Select>
             <Select
-              className="max-w-[180px]"
+              className="!w-auto min-w-[160px] shrink-0"
               value={method}
               onChange={(e) => {
                 setMethod(e.target.value);
