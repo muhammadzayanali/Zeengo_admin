@@ -19,14 +19,23 @@ import { ApiClientError } from '@/shared/api/client';
 import { formatMoney } from '@/shared/lib/cn';
 import type { Package } from '@/shared/api/types';
 
-const emptyForm = (): PackageInput & { id?: string } => ({
+type PackageForm = {
+  id?: string;
+  name: string;
+  slug: string;
+  pricePerPerson: string;
+  minPersons: string;
+  durationDays: string;
+  description: string;
+};
+
+const emptyForm = (): PackageForm => ({
   name: '',
   slug: '',
-  pricePerPerson: 0,
-  minPersons: 1,
-  durationDays: undefined,
+  pricePerPerson: '',
+  minPersons: '',
+  durationDays: '',
   description: '',
-  inclusions: [],
 });
 
 export function PackagesPage() {
@@ -98,11 +107,10 @@ export function PackagesPage() {
       id: pkg.id,
       name: pkg.name,
       slug: pkg.slug,
-      pricePerPerson: pkg.pricePerPerson,
-      minPersons: pkg.minPersons,
-      durationDays: pkg.durationDays ?? undefined,
+      pricePerPerson: String(pkg.pricePerPerson ?? ''),
+      minPersons: String(pkg.minPersons ?? ''),
+      durationDays: pkg.durationDays != null ? String(pkg.durationDays) : '',
       description: pkg.description ?? '',
-      inclusions: pkg.inclusions,
     });
     setInclusionsText(pkg.inclusions.join(', '));
     setOpen(true);
@@ -200,8 +208,10 @@ export function PackagesPage() {
             <Input
               type="number"
               min={0}
+              inputMode="decimal"
               value={form.pricePerPerson}
-              onChange={(e) => setForm({ ...form, pricePerPerson: Number(e.target.value) })}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setForm({ ...form, pricePerPerson: e.target.value })}
             />
           </div>
           <div>
@@ -209,8 +219,10 @@ export function PackagesPage() {
             <Input
               type="number"
               min={1}
-              value={form.minPersons ?? 1}
-              onChange={(e) => setForm({ ...form, minPersons: Number(e.target.value) })}
+              inputMode="numeric"
+              value={form.minPersons}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setForm({ ...form, minPersons: e.target.value })}
             />
           </div>
           <div>
@@ -218,13 +230,10 @@ export function PackagesPage() {
             <Input
               type="number"
               min={1}
-              value={form.durationDays ?? ''}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  durationDays: e.target.value ? Number(e.target.value) : undefined,
-                })
-              }
+              inputMode="numeric"
+              value={form.durationDays}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setForm({ ...form, durationDays: e.target.value })}
             />
           </div>
           <div className="sm:col-span-2">
