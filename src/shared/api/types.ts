@@ -174,6 +174,7 @@ export interface Payment {
   status: string;
   location: string | null;
   notes: string | null;
+  paidAt?: string | null;
   createdAt: string;
   booking?: { id: string; znCode: string };
 }
@@ -429,6 +430,7 @@ export interface EodReport {
 
 export interface FinanceSummary {
   today: {
+    total: { amount: number; count: number };
     stripe: { amount: number; count: number };
     cash: { amount: number; count: number };
   };
@@ -439,6 +441,18 @@ export interface RevenueByMethod {
   days: number;
   total: number;
   byMethod: Array<{ method: string; amount: number; count: number }>;
+}
+
+export interface RevenueSeriesPoint {
+  date: string;
+  stripe: number;
+  cash: number;
+  total: number;
+}
+
+export interface RevenueSeries {
+  days: number;
+  points: RevenueSeriesPoint[];
 }
 
 export interface PaymentHistoryItem extends Payment {
