@@ -455,6 +455,8 @@ export interface SplizerClient {
   clientName: string;
   clientPhone: string;
   status: string;
+  packageName: string | null;
+  partySize: number;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
