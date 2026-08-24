@@ -25,6 +25,11 @@ import {
   Route,
   Sparkles,
   Languages,
+  Hotel,
+  Ticket,
+  Wrench,
+  Handshake,
+  ClipboardList,
 } from 'lucide-react';
 import type { StaffRole } from '@/shared/api/types';
 import { ROLE_PERMISSIONS } from '@/modules/auth/permissions';
@@ -63,6 +68,12 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'nav.operationsRoom',
         roles: ROLE_PERMISSIONS.operationsRoom,
         icon: Map,
+      },
+      {
+        to: '/operations',
+        labelKey: 'nav.operations',
+        roles: ROLE_PERMISSIONS.operations,
+        icon: ClipboardList,
       },
       {
         to: '/daily-ops',
@@ -135,6 +146,30 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'nav.guides',
         roles: ROLE_PERMISSIONS.guides,
         icon: Compass,
+      },
+      {
+        to: '/hotels',
+        labelKey: 'nav.hotels',
+        roles: ROLE_PERMISSIONS.catalog,
+        icon: Hotel,
+      },
+      {
+        to: '/activities',
+        labelKey: 'nav.activities',
+        roles: ROLE_PERMISSIONS.catalog,
+        icon: Ticket,
+      },
+      {
+        to: '/services',
+        labelKey: 'nav.services',
+        roles: ROLE_PERMISSIONS.catalog,
+        icon: Wrench,
+      },
+      {
+        to: '/b2b-partners',
+        labelKey: 'nav.b2bPartners',
+        roles: ROLE_PERMISSIONS.catalog,
+        icon: Handshake,
       },
       {
         to: '/vendors',

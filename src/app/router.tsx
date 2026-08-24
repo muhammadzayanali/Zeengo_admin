@@ -127,6 +127,30 @@ const OperationsRoomPage = lazy(() =>
     default: m.OperationsRoomPage,
   })),
 );
+const OperationsPage = lazy(() =>
+  import('@/modules/command/operations/pages/OperationsPage').then((m) => ({
+    default: m.OperationsPage,
+  })),
+);
+const HotelsPage = lazy(() =>
+  import('@/modules/fleet/catalog/pages/CatalogPages').then((m) => ({ default: m.HotelsPage })),
+);
+const ActivitiesPage = lazy(() =>
+  import('@/modules/fleet/catalog/pages/CatalogPages').then((m) => ({
+    default: m.ActivitiesPage,
+  })),
+);
+const ServicesPage = lazy(() =>
+  import('@/modules/fleet/catalog/pages/CatalogPages').then((m) => ({ default: m.ServicesPage })),
+);
+const B2bPartnersPage = lazy(() =>
+  import('@/modules/fleet/catalog/pages/CatalogPages').then((m) => ({
+    default: m.B2bPartnersPage,
+  })),
+);
+const ClientAppRoutes = lazy(() =>
+  import('@/modules/client-app/pages/ClientApp').then((m) => ({ default: m.ClientAppRoutes })),
+);
 const GuidesPage = lazy(() =>
   import('@/modules/fleet/guides/pages/GuidesPage').then((m) => ({ default: m.GuidesPage })),
 );
@@ -158,6 +182,15 @@ export function AppRouter() {
         element={
           <L>
             <LoginPage />
+          </L>
+        }
+      />
+
+      <Route
+        path="/client/*"
+        element={
+          <L>
+            <ClientAppRoutes />
           </L>
         }
       />
@@ -376,7 +409,39 @@ export function AppRouter() {
             path="/operations"
             element={
               <L>
-                <OperationsRoomPage />
+                <OperationsPage />
+              </L>
+            }
+          />
+          <Route
+            path="/hotels"
+            element={
+              <L>
+                <HotelsPage />
+              </L>
+            }
+          />
+          <Route
+            path="/activities"
+            element={
+              <L>
+                <ActivitiesPage />
+              </L>
+            }
+          />
+          <Route
+            path="/services"
+            element={
+              <L>
+                <ServicesPage />
+              </L>
+            }
+          />
+          <Route
+            path="/b2b-partners"
+            element={
+              <L>
+                <B2bPartnersPage />
               </L>
             }
           />

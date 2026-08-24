@@ -215,7 +215,9 @@ export type VendorType =
   | 'guide'
   | 'bus'
   | 'activity'
-  | 'driver';
+  | 'driver'
+  | 'service'
+  | 'b2b';
 
 export type VendorPaymentTerms = 'bank_transfer' | 'cash' | 'voucher';
 
@@ -274,6 +276,8 @@ export interface VendorStats {
   bus: number;
   activity: number;
   driver: number;
+  service?: number;
+  b2b?: number;
 }
 
 export interface VendorVoucher {
