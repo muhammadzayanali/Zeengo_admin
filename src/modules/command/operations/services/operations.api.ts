@@ -14,6 +14,8 @@ export type OpsClientCard = {
   totalItems: number;
   notConfirmedTitles: string[];
   coordinatorName: string | null;
+  driverName: string | null;
+  createdAt: string;
 };
 
 export type OpsActivity = {
@@ -58,13 +60,35 @@ export type OpsBookingDetail = {
   clientName: string;
   clientPhone: string;
   clientEmail: string | null;
+  nationality: string | null;
   packageName: string | null;
   status: string;
   arrivalDate: string | null;
   departureDate: string | null;
   partySize: number;
+  totalAmount: number;
+  paidAmount: number;
+  dueAmount: number;
+  internalNotes: string | null;
   days: OpsDay[];
   staff: OpsStaffLink[];
+  driverName: string | null;
+  driverPhone: string | null;
+  checklist: Array<{ id: string; title: string; isDone: boolean }>;
+  editRequests: Array<{
+    id: string;
+    type: string;
+    status: string;
+    reason: string | null;
+    createdAt: string;
+  }>;
+  payments: Array<{
+    id: string;
+    amount: number;
+    method: string;
+    status: string;
+    createdAt: string;
+  }>;
 };
 
 export const operationsApi = {
