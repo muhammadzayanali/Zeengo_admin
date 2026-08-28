@@ -5,17 +5,23 @@ import { getAccessToken, getWsUrl } from '@/shared/api/client';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { useToast } from '@/shared/ui';
 import { chatKeys } from '@/modules/tools/chat/services/chat.api';
-import type { ChatMessage } from '@/shared/api/types';
+import type { ChatMessage, Conversation } from '@/shared/api/types';
 
 /** Shared socket for staff shell — chat join/typing + ops invalidation. */
 let sharedSocket: Socket | null = null;
+/** Conversation currently open in Team Chat (unread badges stay clear). */
+let activeChatConversationId: string | null = null;
 
 export function getOpsSocket(): Socket | null {
   return sharedSocket;
 }
 
+export function setActiveChatConversationId(id: string | null) {
+  activeChatConversationId = id;
+}
+
 export function useOpsRealtime() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const socketRef = useRef<Socket | null>(null);
@@ -24,6 +30,7 @@ export function useOpsRealtime() {
     if (!isAuthenticated) return;
     const token = getAccessToken();
     if (!token) return;
+    const myStaffId = user?.id ?? null;
 
     const ns = io(getWsUrl(), {
       transports: ['websocket', 'polling'],
@@ -68,13 +75,37 @@ export function useOpsRealtime() {
         queryClient.setQueryData<ChatMessage[]>(
           chatKeys.messages(payload.conversationId),
           (prev) => {
-            if (!prev) return prev;
+            if (!prev) return [payload];
             if (prev.some((m) => m.id === payload.id)) return prev;
+            const tempIdx = prev.findIndex(
+              (m) =>
+                m.id.startsWith('temp-') &&
+                m.body === payload.body &&
+                (m.senderStaffId === payload.senderStaffId ||
+                  m.senderClientId === payload.senderClientId),
+            );
+            if (tempIdx >= 0) {
+              const next = [...prev];
+              next[tempIdx] = payload;
+              return next;
+            }
             return [...prev, payload];
           },
         );
+        queryClient.setQueryData(chatKeys.conversations(), (prev: Conversation[] | undefined) => {
+          if (!prev) return prev;
+          return prev.map((c) => {
+            if (c.id !== payload.conversationId) return c;
+            const isActive = activeChatConversationId === c.id;
+            const fromSelf = Boolean(myStaffId && payload.senderStaffId === myStaffId);
+            return {
+              ...c,
+              lastMessageAt: payload.createdAt,
+              unreadCount: isActive || fromSelf ? 0 : c.unreadCount + 1,
+            };
+          });
+        });
       }
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
     });
     ns.on('message.translated', (payload: ChatMessage) => {
       if (!payload?.conversationId || !payload.id) return;
@@ -89,7 +120,7 @@ export function useOpsRealtime() {
       );
     });
     ns.on('message.read', () => {
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+      /* local clearUnreadBadge handles open thread */
     });
     ns.on('task.updated', () => {
       invalidate('tasks');
@@ -120,5 +151,5 @@ export function useOpsRealtime() {
       if (sharedSocket === ns) sharedSocket = null;
       socketRef.current = null;
     };
-  }, [isAuthenticated, queryClient, push]);
+  }, [isAuthenticated, queryClient, push, user?.id]);
 }

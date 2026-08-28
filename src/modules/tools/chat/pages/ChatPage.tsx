@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { chatApi, chatKeys } from '../services/chat.api';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
-import { getOpsSocket } from '@/shared/realtime/useOpsRealtime';
+import { getOpsSocket, setActiveChatConversationId } from '@/shared/realtime/useOpsRealtime';
 import {
   Button,
   EmptyState,
@@ -52,6 +52,7 @@ export function ChatPage() {
   const [typingLabel, setTypingLabel] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingEmit = useRef(0);
   const bookingParam = searchParams.get('bookingId');
   const openedBookingRef = useRef<string | null>(null);
 
@@ -127,24 +128,72 @@ export function ChatPage() {
   });
 
   const messages = messagesQuery.data ?? [];
+  const markedReadFor = useRef<string | null>(null);
 
-  // Join conversation room + mark read on open
+  function clearUnreadBadge(id: string) {
+    qc.setQueryData(chatKeys.conversations(), (prev: typeof conversationsQuery.data) => {
+      if (!prev) return prev;
+      return prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c));
+    });
+  }
+
+  async function markConversationRead(id: string, lastMessageId: string) {
+    if (!lastMessageId || lastMessageId.startsWith('temp-')) return;
+    clearUnreadBadge(id);
+    try {
+      await chatApi.markRead(id, lastMessageId);
+      markedReadFor.current = `${id}:${lastMessageId}`;
+    } catch {
+      /* keep badge cleared locally; next open retries */
+    }
+  }
+
+  // Join room when conversation changes
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId) {
+      setActiveChatConversationId(null);
+      return;
+    }
+    setActiveChatConversationId(conversationId);
+    clearUnreadBadge(conversationId);
     const socket = getOpsSocket();
     socket?.emit('chat.join', { conversationId });
-
-    const last = messages[messages.length - 1];
-    if (last?.id) {
-      void chatApi.markRead(conversationId, last.id).then(() => {
-        void qc.invalidateQueries({ queryKey: chatKeys.conversations() });
-      });
-    }
-
     return () => {
       socket?.emit('chat.leave', { conversationId });
+      markedReadFor.current = null;
+      setActiveChatConversationId(null);
     };
-  }, [conversationId, messages.length, qc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
+
+  // Mark latest real message as read whenever the open inbox updates
+  useEffect(() => {
+    if (!conversationId || !messages.length) return;
+    const lastReal = [...messages].reverse().find((m) => !m.id.startsWith('temp-'));
+    if (!lastReal) return;
+    const key = `${conversationId}:${lastReal.id}`;
+    if (markedReadFor.current === key) return;
+    void markConversationRead(conversationId, lastReal.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, messages]);
+
+  // If a new message arrives while this inbox is open, keep badge at 0
+  useEffect(() => {
+    const socket = getOpsSocket();
+    if (!socket || !conversationId) return;
+    const onNew = (payload: { conversationId?: string; id?: string }) => {
+      if (payload.conversationId !== conversationId || !payload.id) return;
+      clearUnreadBadge(conversationId);
+      if (!payload.id.startsWith('temp-')) {
+        void markConversationRead(conversationId, payload.id);
+      }
+    };
+    socket.on('message.new', onNew);
+    return () => {
+      socket.off('message.new', onNew);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
 
   // Typing indicator from peers
   useEffect(() => {
@@ -172,30 +221,68 @@ export function ChatPage() {
   }, [messages.length, typingLabel]);
 
   const sendMutation = useMutation({
-    mutationFn: () => chatApi.sendMessage(conversationId, text.trim()),
-    onSuccess: async (msg) => {
+    mutationFn: ({ body }: { body: string; tempId: string }) =>
+      chatApi.sendMessage(conversationId, body),
+    onMutate: async ({ body, tempId }) => {
       setText('');
+      const optimistic = {
+        id: tempId,
+        conversationId,
+        body,
+        createdAt: new Date().toISOString(),
+        senderType: 'staff' as const,
+        senderStaffId: user?.id ?? null,
+        senderClientId: null,
+        senderName: null,
+      };
+      await qc.cancelQueries({ queryKey: chatKeys.messages(conversationId) });
+      const previous = qc.getQueryData(chatKeys.messages(conversationId));
+      qc.setQueryData(chatKeys.messages(conversationId), (prev: typeof messages | undefined) => [
+        ...(prev ?? []),
+        optimistic,
+      ]);
+      qc.setQueryData(chatKeys.conversations(), (prev: typeof conversationsQuery.data) => {
+        if (!prev) return prev;
+        return prev.map((c) =>
+          c.id === conversationId
+            ? { ...c, lastMessageAt: optimistic.createdAt, unreadCount: 0 }
+            : c,
+        );
+      });
+      return { previous, tempId };
+    },
+    onSuccess: (msg, { tempId }) => {
       qc.setQueryData(chatKeys.messages(conversationId), (prev: typeof messages | undefined) => {
         if (!prev) return [msg];
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+        const withoutTemp = prev.filter((m) => m.id !== tempId && m.id !== msg.id);
+        return [...withoutTemp, msg];
       });
-      await qc.invalidateQueries({ queryKey: chatKeys.conversations() });
-      if (msg.id) {
-        try {
-          await chatApi.markRead(conversationId, msg.id);
-        } catch {
-          /* ignore */
-        }
-      }
+      // Background only — don't block the UI / don't refetch unread for open thread
+      void chatApi.markRead(conversationId, msg.id).catch(() => undefined);
+      clearUnreadBadge(conversationId);
     },
-    onError: (err) => {
+    onError: (err, { body }, ctx) => {
+      if (ctx?.previous) {
+        qc.setQueryData(chatKeys.messages(conversationId), ctx.previous);
+      } else {
+        qc.setQueryData(chatKeys.messages(conversationId), (prev: typeof messages | undefined) =>
+          prev?.filter((m) => m.id !== ctx?.tempId),
+        );
+      }
+      setText(body);
       push({
         tone: 'error',
         title: err instanceof ApiClientError ? err.message : t('chat.sendFailed'),
       });
     },
   });
+
+  function submitMessage() {
+    const body = text.trim();
+    if (!body || !conversationId) return;
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    sendMutation.mutate({ body, tempId });
+  }
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -221,6 +308,7 @@ export function ChatPage() {
     ?? (conversationsQuery.data ?? []).find((c) => c.id === conversationId);
 
   function selectConversation(id: string) {
+    clearUnreadBadge(id);
     setConversationId(id);
     const next = new URLSearchParams(searchParams);
     next.set('conversationId', id);
@@ -232,10 +320,11 @@ export function ChatPage() {
 
   function onType(value: string) {
     setText(value);
-    const socket = getOpsSocket();
-    if (conversationId && value.trim()) {
-      socket?.emit('chat.typing', { conversationId });
-    }
+    if (!conversationId || !value.trim()) return;
+    const now = Date.now();
+    if (now - lastTypingEmit.current < 900) return;
+    lastTypingEmit.current = now;
+    getOpsSocket()?.emit('chat.typing', { conversationId });
   }
 
   return (
@@ -399,8 +488,7 @@ export function ChatPage() {
             className="flex gap-2 border-t border-[var(--line)] p-3"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!text.trim() || !conversationId || sendMutation.isPending) return;
-              sendMutation.mutate();
+              submitMessage();
             }}
           >
             <Input
@@ -408,12 +496,9 @@ export function ChatPage() {
               onChange={(e) => onType(e.target.value)}
               placeholder={t('chat.writeMessage')}
               disabled={!conversationId}
+              autoComplete="off"
             />
-            <Button
-              type="submit"
-              disabled={!conversationId || !text.trim()}
-              loading={sendMutation.isPending}
-            >
+            <Button type="submit" disabled={!conversationId || !text.trim()}>
               {t('chat.send')}
             </Button>
           </form>
