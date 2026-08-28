@@ -721,21 +721,23 @@ function OpsDetailBody({
         <section className="space-y-3 text-sm">
           <p className="text-[var(--ink-muted)]">{t('operations.chatHint')}</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Button type="button" variant="secondary" onClick={() => navigate('/chat')}>
+            <Button
+              type="button"
+              onClick={() =>
+                navigate(`/chat?bookingId=${encodeURIComponent(detail.bookingId)}`)
+              }
+            >
               {t('operations.clientChat')}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate('/chat')}>
-              {t('operations.supportChat')}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate('/operations-room')}>
-              {t('operations.opsChat')}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => navigate(`/client/login?zn=${encodeURIComponent(detail.znCode)}`)}
+              onClick={() => navigate('/chat?filter=team')}
             >
-              {t('operations.appLink')}
+              {t('operations.opsChat')}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => navigate('/chat')}>
+              {t('nav.chat')}
             </Button>
           </div>
         </section>

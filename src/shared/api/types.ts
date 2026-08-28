@@ -338,6 +338,8 @@ export interface Conversation {
   createdAt: string;
   lastMessageAt: string | null;
   unreadCount: number;
+  znCode?: string | null;
+  clientName?: string | null;
 }
 
 export interface ChatMessage {
@@ -695,6 +697,7 @@ export interface StaffStats {
 
 export interface ClientThread extends Conversation {
   clientName: string | null;
+  znCode?: string | null;
 }
 
 export interface ParsedItineraryDay {
