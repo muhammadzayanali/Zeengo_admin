@@ -30,6 +30,22 @@ import type {
   UnassignedBooking,
 } from '@/shared/api/types';
 
+function assignmentTone(status: string): StatusTone {
+  if (status === 'pending') return 'warning';
+  if (status === 'accepted' || status === 'active') return 'accent';
+  if (status === 'in_progress') return 'success';
+  if (status === 'rejected' || status === 'cancelled') return 'danger';
+  if (status === 'completed') return 'default';
+  return 'default';
+}
+
+function openAssignmentFromMe(me: DriverDetail) {
+  const open = me.assignments?.find((a) =>
+    ['pending', 'accepted', 'in_progress', 'active'].includes(a.status),
+  );
+  return open ?? me.activeAssignment ?? null;
+}
+
 const DUTY: DriverDutyStatus[] = ['available', 'en_route', 'resting', 'off_duty'];
 
 const DUTY_LABEL: Record<string, string> = {
@@ -455,7 +471,7 @@ function DriverWorkspace({
   reviews: DriverReview[];
 }) {
   const { t } = useTranslation();
-  const assignment = driver.activeAssignment ?? driver.assignments?.[0] ?? null;
+  const assignment = openAssignmentFromMe(driver);
 
   return (
     <div className="space-y-4 text-sm">
@@ -483,9 +499,16 @@ function DriverWorkspace({
         </p>
         {assignment ? (
           <>
-            <p className="mt-1 font-medium">
-              {assignment.clientName} ({assignment.znCode})
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="font-medium">
+                {assignment.clientName} ({assignment.znCode})
+              </p>
+              {'status' in assignment && assignment.status ? (
+                <StatusBadge tone={assignmentTone(assignment.status)}>
+                  {assignment.status.replace(/_/g, ' ')}
+                </StatusBadge>
+              ) : null}
+            </div>
             <p className="text-xs text-[var(--ink-muted)]">
               {assignment.startDate}
               {assignment.endDate ? ` → ${assignment.endDate}` : ''}
@@ -541,6 +564,8 @@ function DriversTerminal() {
   const { t } = useTranslation();
   const { push } = useToast();
   const qc = useQueryClient();
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   const meQuery = useQuery({
     queryKey: driverKeys.me(),
@@ -610,6 +635,41 @@ function DriversTerminal() {
     },
   });
 
+  const lifecycleMutation = useMutation({
+    mutationFn: async ({
+      action,
+      id,
+      reason,
+    }: {
+      action: 'accept' | 'reject' | 'start' | 'complete';
+      id: string;
+      reason?: string;
+    }) => {
+      if (action === 'accept') return driversApi.acceptAssignment(id);
+      if (action === 'reject') return driversApi.rejectAssignment(id, reason ?? '');
+      if (action === 'start') return driversApi.startAssignment(id);
+      return driversApi.completeAssignment(id);
+    },
+    onSuccess: async (_, { action }) => {
+      const titles = {
+        accept: t('drivers.assignmentAccepted'),
+        reject: t('drivers.assignmentRejected'),
+        start: t('drivers.tripStarted'),
+        complete: t('drivers.tripCompleted'),
+      };
+      push({ tone: 'success', title: titles[action] });
+      setRejectOpen(false);
+      setRejectReason('');
+      await qc.invalidateQueries({ queryKey: driverKeys.all });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
+
   function shareGps() {
     if (!navigator.geolocation) {
       push({ tone: 'error', title: t('drivers.gpsFailed') });
@@ -648,8 +708,10 @@ function DriversTerminal() {
   }
 
   const me = meQuery.data;
-  const assignment = me.activeAssignment ?? me.assignments?.[0] ?? null;
+  const assignment = openAssignmentFromMe(me);
+  const assignmentStatus = assignment?.status ?? me.activeAssignment?.status;
   const nextStop = scheduleQuery.data?.items?.[0];
+  const lifecycleBusy = lifecycleMutation.isPending;
 
   return (
     <PageScaffold
@@ -682,8 +744,18 @@ function DriversTerminal() {
           </p>
           {assignment ? (
             <>
-              <h2 className="mt-1 text-xl font-bold">{assignment.clientName}</h2>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-bold">{assignment.clientName}</h2>
+                {assignmentStatus ? (
+                  <StatusBadge tone={assignmentTone(assignmentStatus)}>
+                    {assignmentStatus.replace(/_/g, ' ')}
+                  </StatusBadge>
+                ) : null}
+              </div>
               <p className="text-sm text-[var(--ink-muted)]">{assignment.znCode}</p>
+              {assignmentStatus === 'pending' ? (
+                <p className="mt-2 text-sm text-[var(--ink-muted)]">{t('drivers.pendingHint')}</p>
+              ) : null}
               <dl className="mt-4 space-y-3 text-sm">
                 {assignment.clientPhone ? (
                 <div className="flex items-center gap-2">
@@ -739,6 +811,60 @@ function DriversTerminal() {
                 </Button>
               </div>
               ) : null}
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--line)] pt-4">
+                {assignmentStatus === 'pending' ? (
+                  <>
+                    <Button
+                      type="button"
+                      disabled={lifecycleBusy}
+                      onClick={() =>
+                        assignment?.id &&
+                        lifecycleMutation.mutate({ action: 'accept', id: assignment.id })
+                      }
+                    >
+                      {t('drivers.acceptAssignment')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={lifecycleBusy}
+                      onClick={() => setRejectOpen(true)}
+                    >
+                      {t('drivers.rejectAssignment')}
+                    </Button>
+                  </>
+                ) : null}
+                {assignmentStatus === 'accepted' || assignmentStatus === 'active' ? (
+                  <Button
+                    type="button"
+                    disabled={lifecycleBusy}
+                    onClick={() => lifecycleMutation.mutate({ action: 'start', id: assignment.id })}
+                  >
+                    {t('drivers.startTrip')}
+                  </Button>
+                ) : null}
+                {assignmentStatus === 'in_progress' ? (
+                  <>
+                    <Button
+                      type="button"
+                      disabled={lifecycleBusy}
+                      onClick={() =>
+                        lifecycleMutation.mutate({ action: 'complete', id: assignment.id })
+                      }
+                    >
+                      {t('drivers.completeAssignment')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={gpsMutation.isPending}
+                      onClick={shareGps}
+                    >
+                      {t('drivers.shareGps')}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             </>
           ) : (
             <p className="mt-2 text-sm text-[var(--ink-muted)]">{t('drivers.idleHint')}</p>
@@ -798,6 +924,51 @@ function DriversTerminal() {
           </div>
         </div>
       </div>
+
+      <DialogShell
+        open={rejectOpen}
+        title={t('drivers.rejectTitle')}
+        onClose={() => {
+          if (lifecycleBusy) return;
+          setRejectOpen(false);
+          setRejectReason('');
+        }}
+      >
+        <Label>{t('drivers.rejectReason')}</Label>
+        <Input
+          className="mt-2"
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder={t('drivers.rejectPlaceholder')}
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={lifecycleBusy}
+            onClick={() => {
+              setRejectOpen(false);
+              setRejectReason('');
+            }}
+          >
+            {t('cancel')}
+          </Button>
+          <Button
+            type="button"
+            disabled={lifecycleBusy || !rejectReason.trim()}
+            onClick={() =>
+              assignment?.id &&
+              lifecycleMutation.mutate({
+                action: 'reject',
+                id: assignment.id,
+                reason: rejectReason.trim(),
+              })
+            }
+          >
+            {t('drivers.rejectConfirm')}
+          </Button>
+        </div>
+      </DialogShell>
     </PageScaffold>
   );
 }

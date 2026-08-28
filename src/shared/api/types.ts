@@ -503,6 +503,12 @@ export interface DriverActiveAssignment {
   clientPhone: string | null;
   startDate: string;
   endDate: string | null;
+  status?: string;
+  acceptedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectedReason?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface DriverListItem {
@@ -542,6 +548,11 @@ export interface DriverAssignment {
   endDate: string | null;
   status: string;
   assignedBy: string;
+  acceptedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectedReason?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
   createdAt: string;
 }
 

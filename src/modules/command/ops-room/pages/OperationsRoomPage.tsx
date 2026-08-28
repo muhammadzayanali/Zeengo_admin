@@ -43,8 +43,8 @@ export function OperationsRoomPage() {
   const positionsQuery = useQuery({
     queryKey: ['drivers', 'live-positions'],
     queryFn: ({ signal }) => driversApi.livePositions(signal),
-    staleTime: 5_000,
-    refetchInterval: 8_000,
+    staleTime: 3_000,
+    refetchInterval: 15_000,
   });
 
   const driversQuery = useQuery({

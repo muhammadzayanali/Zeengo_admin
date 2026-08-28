@@ -127,4 +127,29 @@ export const driversApi = {
   myGps(lat: number, lng: number) {
     return apiRequest({ method: 'POST', url: '/drivers/me/gps', data: { lat, lng } });
   },
+  acceptAssignment(id: string) {
+    return apiRequest<DriverAssignment>({
+      method: 'POST',
+      url: `/drivers/me/assignments/${id}/accept`,
+    });
+  },
+  rejectAssignment(id: string, reason: string) {
+    return apiRequest<DriverAssignment>({
+      method: 'POST',
+      url: `/drivers/me/assignments/${id}/reject`,
+      data: { reason },
+    });
+  },
+  startAssignment(id: string) {
+    return apiRequest<DriverAssignment>({
+      method: 'POST',
+      url: `/drivers/me/assignments/${id}/start`,
+    });
+  },
+  completeAssignment(id: string) {
+    return apiRequest<DriverAssignment>({
+      method: 'POST',
+      url: `/drivers/me/assignments/${id}/complete`,
+    });
+  },
 };

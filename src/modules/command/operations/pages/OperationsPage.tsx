@@ -61,6 +61,14 @@ function statusTone(status: string): StatusTone {
   return 'default';
 }
 
+function assignmentStatusTone(status: string): StatusTone {
+  if (status === 'pending') return 'warning';
+  if (status === 'accepted' || status === 'active') return 'accent';
+  if (status === 'in_progress') return 'success';
+  if (status === 'rejected' || status === 'cancelled') return 'danger';
+  return 'default';
+}
+
 function QrBox({ payload }: { payload: string }) {
   const enc = encodeURIComponent(payload);
   const src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${enc}`;
@@ -442,7 +450,18 @@ export function OperationsPage() {
                   </td>
                   <td className="px-4 py-3">
                     {board === 'driver' ? (
-                      c.driverName || '—'
+                      c.driverName ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{c.driverName}</span>
+                          {c.assignmentStatus ? (
+                            <StatusBadge tone={assignmentStatusTone(c.assignmentStatus)}>
+                              {c.assignmentStatus.replace(/_/g, ' ')}
+                            </StatusBadge>
+                          ) : null}
+                        </div>
+                      ) : (
+                        '—'
+                      )
                     ) : c.notConfirmedTitles.length ? (
                       <StatusBadge tone="warning">
                         {c.notConfirmedTitles.slice(0, 2).join(', ')}
@@ -598,7 +617,18 @@ function OpsDetailBody({
             />
             <Field label={t('operations.totalAmount')} value={formatMoney(detail.totalAmount)} />
             <Field label={t('operations.due')} value={formatMoney(detail.dueAmount)} />
-            <Field label={t('nav.drivers')} value={detail.driverName || '—'} />
+            <Field
+              label={t('nav.drivers')}
+              value={
+                detail.driverName
+                  ? `${detail.driverName}${
+                      detail.assignmentStatus
+                        ? ` (${detail.assignmentStatus.replace(/_/g, ' ')})`
+                        : ''
+                    }`
+                  : '—'
+              }
+            />
             <Field label={t('operations.coordinator')} value={detail.staff.find((s) => s.role === 'coordinator')?.staffName || '—'} />
           </div>
           {detail.internalNotes ? (
@@ -788,8 +818,17 @@ function OpsDetailBody({
               </StatusBadge>
             ))}
             {detail.driverName ? (
-              <StatusBadge tone="success">
+              <StatusBadge
+                tone={
+                  detail.assignmentStatus
+                    ? assignmentStatusTone(detail.assignmentStatus)
+                    : 'success'
+                }
+              >
                 driver: {detail.driverName}
+                {detail.assignmentStatus
+                  ? ` · ${detail.assignmentStatus.replace(/_/g, ' ')}`
+                  : ''}
                 {detail.driverPhone ? ` · ${detail.driverPhone}` : ''}
               </StatusBadge>
             ) : null}

@@ -134,7 +134,33 @@ export function useOpsRealtime() {
     ns.on('driver.updated', () => {
       invalidate('drivers');
       invalidate('dashboard');
+      invalidate('operations');
     });
+    ns.on('driver.gps', () => {
+      invalidate('drivers');
+    });
+    const assignmentHandler = (payload?: { status?: string; znCode?: string | null }) => {
+      invalidate('drivers');
+      invalidate('dashboard');
+      invalidate('operations');
+      if (payload?.status === 'rejected') {
+        push({ tone: 'error', title: 'Driver declined assignment' });
+      } else if (payload?.status === 'accepted') {
+        push({ tone: 'success', title: 'Driver accepted assignment' });
+      } else if (payload?.status === 'in_progress') {
+        push({ tone: 'success', title: 'Driver started trip' });
+      } else if (payload?.status === 'completed') {
+        push({ tone: 'success', title: 'Trip completed' });
+      } else if (payload?.status === 'pending') {
+        push({ tone: 'info', title: 'New driver assignment' });
+      }
+    };
+    ns.on('assignment.created', assignmentHandler);
+    ns.on('assignment.accepted', assignmentHandler);
+    ns.on('assignment.rejected', assignmentHandler);
+    ns.on('assignment.started', assignmentHandler);
+    ns.on('assignment.completed', assignmentHandler);
+    ns.on('assignment.cancelled', assignmentHandler);
     ns.on('notification.created', () => invalidate('notifications'));
     ns.on('notification.new', () => invalidate('notifications'));
     ns.on('edit_request.created', () => {

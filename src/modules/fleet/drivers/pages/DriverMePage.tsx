@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +37,12 @@ export function DriverMePage() {
   const qc = useQueryClient();
   const [day, setDay] = useState<'today' | 'tomorrow'>('today');
 
+  const meQuery = useQuery({
+    queryKey: driverKeys.me(),
+    queryFn: ({ signal }) => driversApi.me(signal),
+    staleTime: 10_000,
+  });
+
   const scheduleQuery = useQuery({
     queryKey: driverKeys.mySchedule(day),
     queryFn: ({ signal }) => driversApi.mySchedule(day, signal),
@@ -44,7 +51,33 @@ export function DriverMePage() {
   });
 
   const items = scheduleQuery.data?.items ?? [];
-  const done = items.filter((i) => i.status === 'done').length;
+
+  const openAssignment =
+    meQuery.data?.assignments?.find((a) =>
+      ['pending', 'accepted', 'in_progress', 'active'].includes(a.status),
+    ) ??
+    (meQuery.data?.activeAssignment?.status &&
+    ['pending', 'accepted', 'in_progress', 'active'].includes(
+      meQuery.data.activeAssignment.status,
+    )
+      ? meQuery.data.activeAssignment
+      : null);
+
+  const pendingAssignment = openAssignment?.status === 'pending' ? openAssignment : null;
+
+  const fallbackDate =
+    openAssignment && items.length === 0 ? openAssignment.startDate : undefined;
+
+  const fallbackScheduleQuery = useQuery({
+    queryKey: driverKeys.mySchedule(fallbackDate ?? 'skip'),
+    queryFn: ({ signal }) => driversApi.mySchedule(fallbackDate!, signal),
+    enabled: Boolean(fallbackDate),
+    staleTime: 10_000,
+  });
+
+  const displayItems =
+    items.length > 0 ? items : (fallbackScheduleQuery.data?.items ?? []);
+  const done = displayItems.filter((i) => i.status === 'done').length;
 
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
@@ -67,16 +100,16 @@ export function DriverMePage() {
       description={t('drivers.myScheduleDesc')}
       stats={
         <>
-          <StatsCard label={t('drivers.stepsToday')} value={items.length} />
+          <StatsCard label={t('drivers.stepsToday')} value={displayItems.length} />
           <StatsCard label={t('drivers.completed')} value={done} tone="success" />
           <StatsCard
             label={t('drivers.remaining')}
-            value={items.length - done}
+            value={displayItems.length - done}
             tone="warning"
           />
           <StatsCard
             label={t('drivers.progress')}
-            value={`${items.length ? Math.round((done / items.length) * 100) : 0}%`}
+            value={`${displayItems.length ? Math.round((done / displayItems.length) * 100) : 0}%`}
             tone="accent"
           />
         </>
@@ -92,7 +125,7 @@ export function DriverMePage() {
         </Select>
       }
     >
-      {scheduleQuery.isLoading ? (
+      {scheduleQuery.isLoading || (fallbackDate && fallbackScheduleQuery.isLoading) ? (
         <div className="space-y-2">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
@@ -107,11 +140,51 @@ export function DriverMePage() {
           }
           onRetry={() => void scheduleQuery.refetch()}
         />
-      ) : items.length === 0 ? (
+      ) : displayItems.length === 0 && openAssignment ? (
+        <div className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              {t('drivers.assignedClient')}
+            </p>
+            <StatusBadge tone={openAssignment.status === 'pending' ? 'warning' : 'accent'}>
+              {(openAssignment.status ?? 'pending').replace(/_/g, ' ')}
+            </StatusBadge>
+          </div>
+          <h2 className="mt-2 text-xl font-bold">{openAssignment.clientName}</h2>
+          <p className="text-sm text-[var(--ink-muted)]">{openAssignment.znCode}</p>
+          <p className="mt-3 text-sm text-[var(--ink-muted)]">
+            {openAssignment.startDate}
+            {openAssignment.endDate ? ` → ${openAssignment.endDate}` : ''}
+          </p>
+          <p className="mt-3 text-sm">
+            {pendingAssignment ? t('drivers.pendingScheduleHint') : t('drivers.noTripsForDay')}
+          </p>
+          {pendingAssignment ? (
+            <Link
+              to="/drivers"
+              className="mt-4 inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+            >
+              {t('drivers.openTerminal')}
+            </Link>
+          ) : null}
+        </div>
+      ) : displayItems.length === 0 ? (
         <EmptyState title={t('drivers.noTrips')} description={t('drivers.noTripsHint')} />
       ) : (
         <div className="space-y-3">
-          {items.map((item: DailyOperationItem) => {
+          {pendingAssignment ? (
+            <div className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-muted)] px-4 py-3 text-sm">
+              <span className="font-semibold">{t('drivers.pendingDispatch')}</span>
+              <span className="text-[var(--ink-muted)]">
+                {' '}
+                — {pendingAssignment.clientName} ({pendingAssignment.znCode}).{' '}
+                <Link to="/drivers" className="font-medium text-[var(--accent)] hover:underline">
+                  {t('drivers.openTerminal')}
+                </Link>
+              </span>
+            </div>
+          ) : null}
+          {displayItems.map((item: DailyOperationItem) => {
             const complete = item.status === 'done';
             return (
               <div
