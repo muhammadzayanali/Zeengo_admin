@@ -5,6 +5,7 @@ export const chatKeys = {
   all: ['chat'] as const,
   conversations: () => [...chatKeys.all, 'conversations'] as const,
   messages: (id: string) => [...chatKeys.all, 'messages', id] as const,
+  clientThreads: () => [...chatKeys.all, 'client-threads'] as const,
 };
 
 export const chatApi = {
@@ -21,6 +22,13 @@ export const chatApi = {
       method: 'POST',
       url: '/chat/conversations',
       data,
+    });
+  },
+  /** Get or create booking support thread (Ops ↔ Client). */
+  bookingThread(bookingId: string) {
+    return apiRequest<Conversation>({
+      method: 'POST',
+      url: `/chat/bookings/${bookingId}/thread`,
     });
   },
   messages(

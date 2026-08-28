@@ -153,7 +153,25 @@ export function ClientsPage() {
                     </td>
                     <td className="px-4 py-3">{b.package?.name ?? '—'}</td>
                     <td className="px-4 py-3">
-                      {b.activeDriverAssignment?.driverName ?? (
+                      {b.activeDriverAssignment?.driverName ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{b.activeDriverAssignment.driverName}</span>
+                          {b.activeDriverAssignment.status &&
+                          b.activeDriverAssignment.status !== 'in_progress' ? (
+                            <StatusBadge
+                              tone={
+                                b.activeDriverAssignment.status === 'pending'
+                                  ? 'warning'
+                                  : b.activeDriverAssignment.status === 'accepted'
+                                    ? 'accent'
+                                    : 'default'
+                              }
+                            >
+                              {b.activeDriverAssignment.status.replace(/_/g, ' ')}
+                            </StatusBadge>
+                          ) : null}
+                        </div>
+                      ) : (
                         <span className="text-[var(--danger)]">Unassigned</span>
                       )}
                     </td>

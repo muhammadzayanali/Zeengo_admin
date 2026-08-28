@@ -174,6 +174,7 @@ export interface Payment {
   status: string;
   location: string | null;
   notes: string | null;
+  paidAt?: string | null;
   createdAt: string;
   booking?: { id: string; znCode: string };
 }
@@ -214,7 +215,9 @@ export type VendorType =
   | 'guide'
   | 'bus'
   | 'activity'
-  | 'driver';
+  | 'driver'
+  | 'service'
+  | 'b2b';
 
 export type VendorPaymentTerms = 'bank_transfer' | 'cash' | 'voucher';
 
@@ -273,6 +276,8 @@ export interface VendorStats {
   bus: number;
   activity: number;
   driver: number;
+  service?: number;
+  b2b?: number;
 }
 
 export interface VendorVoucher {
@@ -333,6 +338,8 @@ export interface Conversation {
   createdAt: string;
   lastMessageAt: string | null;
   unreadCount: number;
+  znCode?: string | null;
+  clientName?: string | null;
 }
 
 export interface ChatMessage {
@@ -429,6 +436,7 @@ export interface EodReport {
 
 export interface FinanceSummary {
   today: {
+    total: { amount: number; count: number };
     stripe: { amount: number; count: number };
     cash: { amount: number; count: number };
   };
@@ -439,6 +447,20 @@ export interface RevenueByMethod {
   days: number;
   total: number;
   byMethod: Array<{ method: string; amount: number; count: number }>;
+}
+
+export interface RevenueSeriesPoint {
+  date: string;
+  stripe: number;
+  cash: number;
+  total: number;
+}
+
+export interface RevenueSeries {
+  days?: number;
+  grain: 'day' | 'month';
+  range: '7d' | 'month' | 'year';
+  points: RevenueSeriesPoint[];
 }
 
 export interface PaymentHistoryItem extends Payment {
@@ -455,6 +477,8 @@ export interface SplizerClient {
   clientName: string;
   clientPhone: string;
   status: string;
+  packageName: string | null;
+  partySize: number;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
@@ -479,6 +503,12 @@ export interface DriverActiveAssignment {
   clientPhone: string | null;
   startDate: string;
   endDate: string | null;
+  status?: string;
+  acceptedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectedReason?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface DriverListItem {
@@ -518,6 +548,11 @@ export interface DriverAssignment {
   endDate: string | null;
   status: string;
   assignedBy: string;
+  acceptedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectedReason?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
   createdAt: string;
 }
 
@@ -673,6 +708,7 @@ export interface StaffStats {
 
 export interface ClientThread extends Conversation {
   clientName: string | null;
+  znCode?: string | null;
 }
 
 export interface ParsedItineraryDay {

@@ -37,6 +37,8 @@ const TYPES: VendorType[] = [
   'bus',
   'activity',
   'driver',
+  'service',
+  'b2b',
 ];
 
 const TYPE_EMOJI: Record<VendorType, string> = {
@@ -46,6 +48,8 @@ const TYPE_EMOJI: Record<VendorType, string> = {
   bus: '🚌',
   activity: '🎭',
   driver: '🚗',
+  service: '🛠️',
+  b2b: '🤝',
 };
 
 const TYPE_LABEL: Record<VendorType, string> = {
@@ -55,6 +59,8 @@ const TYPE_LABEL: Record<VendorType, string> = {
   bus: 'Bus',
   activity: 'Activity',
   driver: 'Driver',
+  service: 'Service',
+  b2b: 'B2B Partner',
 };
 
 function bookingTone(status: string): StatusTone {
