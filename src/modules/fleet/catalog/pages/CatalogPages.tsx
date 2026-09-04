@@ -20,7 +20,7 @@ import {
 } from '@/shared/ui';
 import { ApiClientError } from '@/shared/api/client';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
-import type { VendorType } from '@/shared/api/types';
+import type { Vendor, VendorType } from '@/shared/api/types';
 
 type Props = {
   type: VendorType;
@@ -28,6 +28,35 @@ type Props = {
   descriptionKey: string;
   emptyKey: string;
 };
+
+type FormState = {
+  name: string;
+  city: string;
+  contactName: string;
+  phone: string;
+  email: string;
+  isActive: boolean;
+};
+
+const emptyForm = (): FormState => ({
+  name: '',
+  city: '',
+  contactName: '',
+  phone: '',
+  email: '',
+  isActive: true,
+});
+
+function formFromVendor(row: Vendor): FormState {
+  return {
+    name: row.name ?? '',
+    city: row.city ?? '',
+    contactName: row.contactName ?? '',
+    phone: row.phone ?? '',
+    email: row.email ?? '',
+    isActive: row.isActive !== false,
+  };
+}
 
 export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Props) {
   const { t } = useTranslation();
@@ -37,16 +66,11 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
   const q = useDebouncedValue(search);
   const [page, setPage] = useState(1);
   const [addOpen, setAddOpen] = useState(false);
+  const [editRow, setEditRow] = useState<Vendor | null>(null);
   const [assignId, setAssignId] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState('');
   const [serviceDate, setServiceDate] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    city: '',
-    contactName: '',
-    phone: '',
-    email: '',
-  });
+  const [form, setForm] = useState<FormState>(emptyForm());
 
   const listQuery = useQuery({
     queryKey: vendorKeys.list({ type, page, search: q }),
@@ -73,7 +97,32 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
     onSuccess: async () => {
       push({ tone: 'success', title: t('catalog.created') });
       setAddOpen(false);
-      setForm({ name: '', city: '', contactName: '', phone: '', email: '' });
+      setForm(emptyForm());
+      await qc.invalidateQueries({ queryKey: vendorKeys.all });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      vendorsApi.update(editRow!.id, {
+        name: form.name.trim(),
+        type,
+        city: form.city.trim() || undefined,
+        contactName: form.contactName.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        email: form.email.trim() || undefined,
+        isActive: form.isActive,
+      }),
+    onSuccess: async () => {
+      push({ tone: 'success', title: t('catalog.updated') });
+      setEditRow(null);
+      setForm(emptyForm());
       await qc.invalidateQueries({ queryKey: vendorKeys.all });
     },
     onError: (err) => {
@@ -107,13 +156,76 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
   });
 
   const rows = listQuery.data?.data ?? [];
+  const formBusy = createMutation.isPending || updateMutation.isPending;
+
+  function renderFormFields() {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Label>{t('common.name')}</Label>
+          <Input
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label>{t('catalog.city')}</Label>
+          <Input
+            value={form.city}
+            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label>{t('catalog.contact')}</Label>
+          <Input
+            value={form.contactName}
+            onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label>{t('common.phone')}</Label>
+          <Input
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+          />
+        </div>
+        <div>
+          <Label>{t('common.email')}</Label>
+          <Input
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          />
+        </div>
+        {editRow ? (
+          <div className="sm:col-span-2">
+            <Label>{t('common.status')}</Label>
+            <Select
+              value={form.isActive ? 'active' : 'inactive'}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, isActive: e.target.value === 'active' }))
+              }
+            >
+              <option value="active">{t('common.active')}</option>
+              <option value="inactive">{t('common.inactive')}</option>
+            </Select>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <PageScaffold
       title={t(titleKey)}
       description={t(descriptionKey)}
       primaryAction={
-        <Button type="button" onClick={() => setAddOpen(true)}>
+        <Button
+          type="button"
+          onClick={() => {
+            setForm(emptyForm());
+            setAddOpen(true);
+          }}
+        >
           {t('catalog.add')}
         </Button>
       }
@@ -161,9 +273,21 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
                     </StatusBadge>
                   </td>
                   <td className="px-4 py-3 text-end">
-                    <Button type="button" variant="secondary" onClick={() => setAssignId(row.id)}>
-                      {t('catalog.assign')}
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setEditRow(row);
+                          setForm(formFromVendor(row));
+                        }}
+                      >
+                        {t('edit')}
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => setAssignId(row.id)}>
+                        {t('catalog.assign')}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -180,52 +304,48 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
         </div>
       )}
 
-      <DialogShell open={addOpen} onClose={() => setAddOpen(false)} title={t('catalog.add')}>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Label>{t('common.name')}</Label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label>{t('catalog.city')}</Label>
-            <Input
-              value={form.city}
-              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label>{t('catalog.contact')}</Label>
-            <Input
-              value={form.contactName}
-              onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label>{t('common.phone')}</Label>
-            <Input
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label>{t('common.email')}</Label>
-            <Input
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-          </div>
-        </div>
+      <DialogShell
+        open={addOpen}
+        onClose={() => {
+          if (formBusy) return;
+          setAddOpen(false);
+        }}
+        title={t('catalog.add')}
+      >
+        {renderFormFields()}
         <div className="mt-4 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => setAddOpen(false)}>
             {t('cancel')}
           </Button>
           <Button
             type="button"
-            disabled={!form.name.trim() || createMutation.isPending}
+            disabled={!form.name.trim() || formBusy}
+            loading={createMutation.isPending}
             onClick={() => createMutation.mutate()}
+          >
+            {t('save')}
+          </Button>
+        </div>
+      </DialogShell>
+
+      <DialogShell
+        open={Boolean(editRow)}
+        onClose={() => {
+          if (formBusy) return;
+          setEditRow(null);
+        }}
+        title={t('catalog.edit')}
+      >
+        {renderFormFields()}
+        <div className="mt-4 flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setEditRow(null)}>
+            {t('cancel')}
+          </Button>
+          <Button
+            type="button"
+            disabled={!form.name.trim() || formBusy}
+            loading={updateMutation.isPending}
+            onClick={() => updateMutation.mutate()}
           >
             {t('save')}
           </Button>
@@ -265,6 +385,7 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
           <Button
             type="button"
             disabled={!bookingId || assignMutation.isPending}
+            loading={assignMutation.isPending}
             onClick={() => assignMutation.mutate()}
           >
             {t('catalog.assign')}

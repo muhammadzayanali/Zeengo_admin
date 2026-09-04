@@ -909,8 +909,8 @@ function DriversTerminal() {
               onClick={shareGps}
             >
               {t('drivers.shareGps')}
-            </Button>
-          </div>
+        </Button>
+      </div>
 
           <div className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">

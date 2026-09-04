@@ -266,7 +266,7 @@ export function FinancePage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+        <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="bg-[var(--bg-muted)] text-xs uppercase text-[var(--ink-muted)]">
                   <tr>
@@ -276,9 +276,9 @@ export function FinancePage() {
                     <th className="px-4 py-3 text-start">{t('common.amount')}</th>
                     <th className="px-4 py-3 text-start">{t('common.status')}</th>
                     <th className="px-4 py-3 text-start">{t('payments.when')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              </tr>
+            </thead>
+            <tbody>
                   {(ledgerQuery.data?.data ?? []).map((tx) => (
                     <tr key={tx.id} className="border-t border-[var(--line)]">
                       <td className="px-4 py-3 font-medium">{tx.clientName}</td>
@@ -287,7 +287,7 @@ export function FinancePage() {
                       </td>
                       <td className="px-4 py-3">{methodLabel(tx.method, t)}</td>
                       <td className="px-4 py-3 font-semibold">{formatMoney(tx.amount)}</td>
-                      <td className="px-4 py-3">
+                  <td className="px-4 py-3">
                         <StatusBadge tone={statusTone(tx.status)}>
                           {tx.status === 'paid'
                             ? t('finance.paid')
@@ -302,16 +302,16 @@ export function FinancePage() {
                                     : tx.status === 'expired'
                                       ? t('finance.expired')
                                       : tx.status}
-                        </StatusBadge>
-                      </td>
+                    </StatusBadge>
+                  </td>
                       <td className="px-4 py-3 text-[var(--ink-muted)]">
                         {new Date(tx.paidAt || tx.createdAt).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
             <div className="border-t border-[var(--line)] px-4 py-3">
               <Pagination
                 page={ledgerQuery.data?.meta.page ?? page}

@@ -385,16 +385,16 @@ export function ChatPage() {
           ) : (
             <div className="min-h-0 flex-1 overflow-y-auto">
               {conversations.map((ch) => (
-                <button
-                  key={ch.id}
-                  type="button"
+            <button
+              key={ch.id}
+              type="button"
                   onClick={() => selectConversation(ch.id)}
-                  className={
+              className={
                     conversationId === ch.id
-                      ? 'mb-1 w-full rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-start text-sm font-medium text-[var(--accent)]'
-                      : 'mb-1 w-full rounded-lg px-3 py-2 text-start text-sm text-[var(--ink-muted)] hover:bg-[var(--bg-muted)]'
-                  }
-                >
+                  ? 'mb-1 w-full rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-start text-sm font-medium text-[var(--accent)]'
+                  : 'mb-1 w-full rounded-lg px-3 py-2 text-start text-sm text-[var(--ink-muted)] hover:bg-[var(--bg-muted)]'
+              }
+            >
                   <span className="flex items-center justify-between gap-2">
                     <span className="truncate">{conversationLabel(ch)}</span>
                     {ch.unreadCount > 0 ? (
@@ -407,8 +407,8 @@ export function ChatPage() {
                       : ch.type}
                     {ch.lastMessageAt ? ` · ${elapsedLabel(ch.lastMessageAt)}` : ''}
                   </span>
-                </button>
-              ))}
+            </button>
+          ))}
             </div>
           )}
         </aside>
@@ -417,7 +417,7 @@ export function ChatPage() {
           <div className="border-b border-[var(--line)] px-4 py-3">
             <div className="text-sm font-semibold">
               {active ? conversationLabel(active) : t('chat.select')}
-            </div>
+          </div>
             {active?.znCode ? (
               <div className="text-xs text-[var(--ink-muted)]">
                 {active.znCode}

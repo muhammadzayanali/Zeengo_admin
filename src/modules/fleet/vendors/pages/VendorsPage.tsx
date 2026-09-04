@@ -111,6 +111,11 @@ export function VendorsPage() {
   const [type, setType] = useState<string>('');
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>(emptyAdd());
+  const [editVendor, setEditVendor] = useState<Vendor | null>(null);
+  const [editForm, setEditForm] = useState<AddForm & { isActive: boolean }>({
+    ...emptyAdd(),
+    isActive: true,
+  });
   const [assignVendor, setAssignVendor] = useState<Vendor | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [assignForm, setAssignForm] = useState({
@@ -192,6 +197,54 @@ export function VendorsPage() {
       push({ tone: 'success', title: t('vendors.created') });
       setAddOpen(false);
       setAddForm(emptyAdd());
+      await qc.invalidateQueries({ queryKey: vendorKeys.all });
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      vendorsApi.update(editVendor!.id, {
+        name: editForm.name.trim(),
+        type: editForm.type,
+        city: editForm.city.trim() || undefined,
+        contactName: editForm.contactName.trim() || undefined,
+        phone: editForm.phone.trim() || undefined,
+        email: editForm.email.trim() || undefined,
+        commissionPct: Number(editForm.commissionPct) || 0,
+        paymentTerms: editForm.paymentTerms || undefined,
+        cancellationPolicy: editForm.cancellationPolicy.trim() || undefined,
+        notes: editForm.notes.trim() || undefined,
+        isActive: editForm.isActive,
+      }),
+    onSuccess: async () => {
+      push({ tone: 'success', title: t('vendors.updated') });
+      const id = editVendor!.id;
+      setEditVendor(null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: vendorKeys.all }),
+        qc.invalidateQueries({ queryKey: vendorKeys.detail(id) }),
+      ]);
+    },
+    onError: (err) => {
+      push({
+        tone: 'error',
+        title: err instanceof ApiClientError ? err.message : t('somethingWrong'),
+      });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () => vendorsApi.remove(editVendor!.id),
+    onSuccess: async () => {
+      push({ tone: 'success', title: t('vendors.removed') });
+      setEditVendor(null);
+      setDetailId(null);
       await qc.invalidateQueries({ queryKey: vendorKeys.all });
     },
     onError: (err) => {
@@ -284,6 +337,29 @@ export function VendorsPage() {
     createMutation.mutate();
   }
 
+  function openEdit(vendor: Vendor) {
+    setEditVendor(vendor);
+    setEditForm({
+      name: vendor.name ?? '',
+      type: (vendor.type as VendorType) || 'hotel',
+      city: vendor.city ?? '',
+      contactName: vendor.contactName ?? '',
+      phone: vendor.phone ?? '',
+      email: vendor.email ?? '',
+      commissionPct: String(vendor.commissionPct ?? 0),
+      paymentTerms: vendor.paymentTerms ?? 'bank_transfer',
+      cancellationPolicy: vendor.cancellationPolicy ?? '',
+      notes: vendor.notes ?? '',
+      isActive: vendor.isActive !== false,
+    });
+  }
+
+  function submitEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editForm.name.trim() || !editVendor) return;
+    updateMutation.mutate();
+  }
+
   return (
     <PageScaffold
       title={t('vendors.title')}
@@ -351,6 +427,7 @@ export function VendorsPage() {
             <VendorCard
               key={vendor.id}
               vendor={vendor}
+              onEdit={() => openEdit(vendor)}
               onAssign={() => {
                 setAssignVendor(vendor);
                 setAssignForm({
@@ -501,6 +578,165 @@ export function VendorsPage() {
       </DialogShell>
 
       <DialogShell
+        open={Boolean(editVendor)}
+        title={t('vendors.edit')}
+        onClose={() => {
+          if (updateMutation.isPending) return;
+          setEditVendor(null);
+        }}
+        wide
+      >
+        <form className="grid gap-3 sm:grid-cols-2" onSubmit={submitEdit}>
+          <div className="sm:col-span-2">
+            <Label htmlFor="ev-name">{t('vendors.name')}</Label>
+            <Input
+              id="ev-name"
+              required
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ev-type">{t('vendors.type')}</Label>
+            <Select
+              id="ev-type"
+              value={editForm.type}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, type: e.target.value as VendorType }))
+              }
+            >
+              {TYPES.map((tp) => (
+                <option key={tp} value={tp}>
+                  {TYPE_EMOJI[tp]} {TYPE_LABEL[tp]}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="ev-status">{t('common.status')}</Label>
+            <Select
+              id="ev-status"
+              value={editForm.isActive ? 'active' : 'inactive'}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, isActive: e.target.value === 'active' }))
+              }
+            >
+              <option value="active">{t('common.active')}</option>
+              <option value="inactive">{t('common.inactive')}</option>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="ev-city">{t('vendors.city')}</Label>
+            <Input
+              id="ev-city"
+              value={editForm.city}
+              onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ev-contact">{t('vendors.contactPerson')}</Label>
+            <Input
+              id="ev-contact"
+              value={editForm.contactName}
+              onChange={(e) => setEditForm((f) => ({ ...f, contactName: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ev-phone">{t('vendors.phone')}</Label>
+            <Input
+              id="ev-phone"
+              value={editForm.phone}
+              onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ev-email">{t('vendors.email')}</Label>
+            <Input
+              id="ev-email"
+              type="email"
+              value={editForm.email}
+              onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ev-comm">{t('vendors.commissionPct')}</Label>
+            <Input
+              id="ev-comm"
+              type="number"
+              min={0}
+              max={100}
+              step="0.01"
+              value={editForm.commissionPct}
+              onChange={(e) => setEditForm((f) => ({ ...f, commissionPct: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="ev-pay">{t('vendors.paymentTerms')}</Label>
+            <Select
+              id="ev-pay"
+              value={editForm.paymentTerms}
+              onChange={(e) => setEditForm((f) => ({ ...f, paymentTerms: e.target.value }))}
+            >
+              <option value="bank_transfer">{t('vendors.bankTransfer')}</option>
+              <option value="cash">{t('vendors.cash')}</option>
+              <option value="voucher">{t('vendors.voucherPay')}</option>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="ev-cancel">{t('vendors.cancellation')}</Label>
+            <Input
+              id="ev-cancel"
+              value={editForm.cancellationPolicy}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, cancellationPolicy: e.target.value }))
+              }
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="ev-notes">{t('vendors.notes')}</Label>
+            <Textarea
+              id="ev-notes"
+              rows={3}
+              value={editForm.notes}
+              onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
+          <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="danger"
+              disabled={updateMutation.isPending || removeMutation.isPending}
+              loading={removeMutation.isPending}
+              onClick={() => {
+                if (!editVendor) return;
+                if (!window.confirm(t('vendors.confirmRemove'))) return;
+                removeMutation.mutate();
+              }}
+            >
+              {t('vendors.remove')}
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setEditVendor(null)}
+                disabled={updateMutation.isPending || removeMutation.isPending}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                type="submit"
+                loading={updateMutation.isPending}
+                disabled={!editForm.name.trim() || removeMutation.isPending}
+              >
+                {t('save')}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </DialogShell>
+
+      <DialogShell
         open={Boolean(assignVendor)}
         title={t('vendors.assignTitle')}
         onClose={() => {
@@ -618,6 +854,10 @@ export function VendorsPage() {
             voucher={voucher}
             voucherPending={voucherMutation.isPending}
             statusPending={statusMutation.isPending}
+            onEdit={() => {
+              openEdit(detailQuery.data!);
+              setDetailId(null);
+            }}
             onVoucher={(id) => voucherMutation.mutate(id)}
             onStatus={(id, status) => statusMutation.mutate({ id, status })}
             onCopy={async (text) => {
@@ -633,10 +873,12 @@ export function VendorsPage() {
 
 function VendorCard({
   vendor,
+  onEdit,
   onAssign,
   onDetails,
 }: {
   vendor: Vendor;
+  onEdit: () => void;
   onAssign: () => void;
   onDetails: () => void;
 }) {
@@ -683,9 +925,14 @@ function VendorCard({
         ) : null}
       </dl>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onAssign}>
-          + {t('vendors.assign')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onEdit}>
+            {t('edit')}
+          </Button>
+          <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onAssign}>
+            + {t('vendors.assign')}
+          </Button>
+        </div>
         <button
           type="button"
           className="text-sm font-medium text-[var(--accent)] hover:underline"
@@ -703,6 +950,7 @@ function VendorDetails({
   voucher,
   voucherPending,
   statusPending,
+  onEdit,
   onVoucher,
   onStatus,
   onCopy,
@@ -711,6 +959,7 @@ function VendorDetails({
   voucher: VendorVoucher | null;
   voucherPending: boolean;
   statusPending: boolean;
+  onEdit: () => void;
   onVoucher: (id: string) => void;
   onStatus: (id: string, status: string) => void;
   onCopy: (text: string) => void;
@@ -721,14 +970,19 @@ function VendorDetails({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="text-lg font-bold">{vendor.name}</h3>
-        <p className="text-sm text-[var(--ink-muted)]">
-          {TYPE_EMOJI[type]} {TYPE_LABEL[type] ?? vendor.type}
-          {vendor.city ? ` · ${vendor.city}` : ''}
-          {' · '}
-          {Number(vendor.commissionPct ?? 0).toFixed(2)}%
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-bold">{vendor.name}</h3>
+          <p className="text-sm text-[var(--ink-muted)]">
+            {TYPE_EMOJI[type]} {TYPE_LABEL[type] ?? vendor.type}
+            {vendor.city ? ` · ${vendor.city}` : ''}
+            {' · '}
+            {Number(vendor.commissionPct ?? 0).toFixed(2)}%
+          </p>
+        </div>
+        <Button type="button" variant="secondary" onClick={onEdit}>
+          {t('edit')}
+        </Button>
       </div>
 
       <section>
