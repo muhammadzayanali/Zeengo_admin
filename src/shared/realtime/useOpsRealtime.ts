@@ -172,6 +172,21 @@ export function useOpsRealtime() {
       invalidate('dashboard');
     });
 
+    const vendorHandler = () => {
+      invalidate('vendors');
+      invalidate('dashboard');
+      invalidate('operations');
+      invalidate('bookings');
+    };
+    ns.on('vendor.created', vendorHandler);
+    ns.on('vendor.updated', vendorHandler);
+    ns.on('vendor.deleted', vendorHandler);
+    ns.on('vendor.assigned', () => {
+      vendorHandler();
+      push({ tone: 'success', title: 'Vendor assigned to booking' });
+    });
+    ns.on('vendor.booking.updated', vendorHandler);
+
     return () => {
       ns.disconnect();
       if (sharedSocket === ns) sharedSocket = null;
