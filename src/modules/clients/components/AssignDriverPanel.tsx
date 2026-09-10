@@ -33,6 +33,7 @@ export function AssignDriverPanel({ booking, onClose }: Props) {
           push({ tone: 'success', title: 'Driver removed' });
           await qc.invalidateQueries({ queryKey: ['bookings', booking.id] });
           await qc.invalidateQueries({ queryKey: ['bookings'] });
+          await qc.invalidateQueries({ queryKey: ['operations', 'booking', booking.id] });
           onClose();
         } catch (err) {
           push({
@@ -61,6 +62,7 @@ export function AssignDriverPanel({ booking, onClose }: Props) {
       push({ tone: 'success', title: 'Driver assigned' });
       await qc.invalidateQueries({ queryKey: ['bookings', booking.id] });
       await qc.invalidateQueries({ queryKey: ['bookings'] });
+      await qc.invalidateQueries({ queryKey: ['operations', 'booking', booking.id] });
       onClose();
     } catch (err) {
       push({

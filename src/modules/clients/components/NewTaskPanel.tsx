@@ -31,6 +31,8 @@ export function NewTaskPanel({ booking, onClose }: Props) {
       push({ tone: 'success', title: 'Task created' });
       await qc.invalidateQueries({ queryKey: ['tasks', booking.id] });
       await qc.invalidateQueries({ queryKey: ['tasks'] });
+      await qc.invalidateQueries({ queryKey: ['bookings', booking.id] });
+      await qc.invalidateQueries({ queryKey: ['operations', 'booking', booking.id] });
       onClose();
     } catch (err) {
       push({

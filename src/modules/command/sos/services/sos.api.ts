@@ -3,7 +3,13 @@ import type { SosAlert } from '@/shared/api/types';
 
 export const sosApi = {
   list(
-    params?: { page?: number; limit?: number; search?: string; status?: string },
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: string;
+      bookingId?: string;
+    },
     signal?: AbortSignal,
   ) {
     return apiList<SosAlert>({ url: '/sos', params: toQuery(params) }, signal);
