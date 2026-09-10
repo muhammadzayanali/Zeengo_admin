@@ -9,6 +9,8 @@ import { editRequestsApi } from '@/modules/clients/edit-requests/services/edit-r
 import { sosApi } from '@/modules/command/sos/services/sos.api';
 import { paymentsApi, type CashMethod } from '@/modules/finance/payments/services/payments.api';
 import { usersApi } from '@/modules/admin/users/services/users.api';
+import { tasksApi } from '@/modules/command/tasks/services/tasks.api';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 import { AssignDriverPanel } from '@/modules/clients/components/AssignDriverPanel';
 import { NewTaskPanel } from '@/modules/clients/components/NewTaskPanel';
 import { ClientEditForm } from '@/modules/clients/components/ClientEditForm';
@@ -240,6 +242,8 @@ export function BookingDetailPage() {
   const { id = '' } = useParams();
   const { push } = useToast();
   const qc = useQueryClient();
+  const { hasRole } = useAuth();
+  const canWrite = hasRole('admin', 'ops_manager', 'support');
   const [tab, setTab] = useState<TabId>('overview');
   const [panel, setPanel] = useState<Panel>(null);
   const [attach, setAttach] = useState<AttachKind>(null);
@@ -272,7 +276,7 @@ export function BookingDetailPage() {
   const itinerary = useQuery({
     queryKey: ['bookings', id, 'itinerary'],
     queryFn: ({ signal }) => itinerariesApi.forBooking(id, signal),
-    enabled: Boolean(id) && (tab === 'program' || tab === 'overview'),
+    enabled: Boolean(id) && tab === 'program',
   });
 
   const staffUsers = useQuery({
@@ -324,7 +328,6 @@ export function BookingDetailPage() {
         startTime: editingItem.startTime || undefined,
         locationName: editingItem.locationName || undefined,
         status: editingItem.status,
-        notes: editingItem.notes || undefined,
       });
     },
     onSuccess: async () => {
@@ -343,6 +346,32 @@ export function BookingDetailPage() {
     mutationFn: (itemId: string) => itinerariesApi.deleteItem(itemId),
     onSuccess: async () => {
       push({ tone: 'success', title: 'Itinerary item removed' });
+      await invalidateAll();
+    },
+    onError: (e) =>
+      push({
+        tone: 'error',
+        title: e instanceof ApiClientError ? e.message : t('somethingWrong'),
+      }),
+  });
+
+  const moveItem = useMutation({
+    mutationFn: ({ itemId, direction }: { itemId: string; direction: 'up' | 'down' }) =>
+      itinerariesApi.moveItem(itemId, direction),
+    onSuccess: async () => {
+      await invalidateAll();
+    },
+    onError: (e) =>
+      push({
+        tone: 'error',
+        title: e instanceof ApiClientError ? e.message : t('somethingWrong'),
+      }),
+  });
+
+  const completeTask = useMutation({
+    mutationFn: (taskId: string) => tasksApi.complete(taskId),
+    onSuccess: async () => {
+      push({ tone: 'success', title: 'Task completed' });
       await invalidateAll();
     },
     onError: (e) =>
@@ -396,15 +425,30 @@ export function BookingDetailPage() {
       push({ tone: 'success', title: 'Guide removed' });
       await invalidateAll();
     },
+    onError: (e) =>
+      push({
+        tone: 'error',
+        title: e instanceof ApiClientError ? e.message : t('somethingWrong'),
+      }),
   });
 
   const approveEdit = useMutation({
     mutationFn: (reqId: string) => editRequestsApi.approve(reqId),
     onSuccess: invalidateAll,
+    onError: (e) =>
+      push({
+        tone: 'error',
+        title: e instanceof ApiClientError ? e.message : t('somethingWrong'),
+      }),
   });
   const rejectEdit = useMutation({
     mutationFn: (reqId: string) => editRequestsApi.reject(reqId),
     onSuccess: invalidateAll,
+    onError: (e) =>
+      push({
+        tone: 'error',
+        title: e instanceof ApiClientError ? e.message : t('somethingWrong'),
+      }),
   });
   const resolveSos = useMutation({
     mutationFn: (sosId: string) => sosApi.resolve(sosId),
@@ -412,6 +456,11 @@ export function BookingDetailPage() {
       push({ tone: 'success', title: 'SOS resolved' });
       await invalidateAll();
     },
+    onError: (e) =>
+      push({
+        tone: 'error',
+        title: e instanceof ApiClientError ? e.message : t('somethingWrong'),
+      }),
   });
 
   if (booking.isLoading) return <Skeleton className="h-64" />;
@@ -481,7 +530,7 @@ export function BookingDetailPage() {
       }
     >
       <Card className="mb-4">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
           <span>
             <span className="text-[var(--ink-muted)]">Package </span>
             {b.package?.name ?? d?.packageName ?? '—'}
@@ -498,55 +547,55 @@ export function BookingDetailPage() {
           </span>
         </div>
         {(b.internalNotes || d?.internalNotes) && (
-          <p className="mt-2 text-sm text-[var(--ink-muted)]">
+          <p className="mt-2 line-clamp-2 text-xs text-[var(--ink-muted)]">
+            <span className="font-medium text-[var(--ink)]">Notes · </span>
             {b.internalNotes ?? d?.internalNotes}
           </p>
         )}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setPanel('edit')}>
-            Edit Booking
-          </Button>
-          <Button variant="secondary" onClick={() => setPanel('driver')}>
-            Assign Driver
-          </Button>
-          <Button variant="secondary" onClick={() => setPanel('guide')}>
-            Assign Guide
-          </Button>
-          <Button variant="secondary" onClick={() => setAttach('hotel')}>
-            Attach Hotel
-          </Button>
-          <Button variant="secondary" onClick={() => setAttach('activity')}>
-            Attach Activity
-          </Button>
-          <Button variant="secondary" onClick={() => setAttach('service')}>
-            Attach Service
-          </Button>
-          <Button variant="secondary" onClick={() => setAttach('b2b')}>
-            Attach B2B
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setAttachVendorType('hotel');
-              setAttach('vendor');
-            }}
-          >
-            Attach Supplier
-          </Button>
-          <Button variant="secondary" onClick={() => setPanel('task')}>
-            Create Task
-          </Button>
-          <Button variant="secondary" onClick={() => setPanel('payment')}>
-            Record Payment
-          </Button>
-          <Button
-            onClick={() => {
-              setTab('chat');
-            }}
-          >
-            Open Chat
-          </Button>
-        </div>
+        {canWrite ? (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(
+              [
+                { label: 'Edit', onClick: () => setPanel('edit') },
+                { label: 'Driver', onClick: () => setPanel('driver') },
+                { label: 'Guide', onClick: () => setPanel('guide') },
+                { label: 'Hotel', onClick: () => setAttach('hotel') },
+                { label: 'Activity', onClick: () => setAttach('activity') },
+                { label: 'Service', onClick: () => setAttach('service') },
+                { label: 'B2B', onClick: () => setAttach('b2b') },
+                {
+                  label: 'Supplier',
+                  onClick: () => {
+                    setAttachVendorType('hotel');
+                    setAttach('vendor');
+                  },
+                },
+                { label: 'Task', onClick: () => setPanel('task') },
+                { label: 'Payment', onClick: () => setPanel('payment') },
+              ] as const
+            ).map((action) => (
+              <Button
+                key={action.label}
+                variant="secondary"
+                className="!h-8 !px-2.5 !text-xs"
+                onClick={action.onClick}
+              >
+                {action.label}
+              </Button>
+            ))}
+            {tab !== 'chat' ? (
+              <Button className="!h-8 !px-2.5 !text-xs" onClick={() => setTab('chat')}>
+                Chat
+              </Button>
+            ) : null}
+          </div>
+        ) : tab !== 'chat' ? (
+          <div className="mt-3">
+            <Button className="!h-8 !px-2.5 !text-xs" onClick={() => setTab('chat')}>
+              Open Chat
+            </Button>
+          </div>
+        ) : null}
       </Card>
 
       <TabBar
@@ -556,6 +605,18 @@ export function BookingDetailPage() {
       />
 
       <div className="mt-4 space-y-4">
+        {ops.isLoading ? <Skeleton className="h-40" /> : null}
+        {ops.isError ? (
+          <ErrorState
+            description={
+              ops.error instanceof Error
+                ? ops.error.message
+                : 'Could not load booking operations data'
+            }
+            onRetry={() => ops.refetch()}
+          />
+        ) : null}
+
         {tab === 'overview' && d ? (
           <div className="grid gap-4 lg:grid-cols-3">
             <SectionCard title="Booking">
@@ -727,15 +788,17 @@ export function BookingDetailPage() {
               Add item
             </Button>
             <p className="mt-2 text-xs text-[var(--ink-muted)]">
-              Reorder is not supported by the backend yet — not faked in UI.
+              Use ↑ / ↓ to reorder within the same day (uses existing sortOrder).
             </p>
-            {!itineraryItems.length ? (
+            {!itineraryItems.length && !itinerary.isLoading ? (
               <div className="mt-4">
                 <EmptyState title={t('bookings.noProgram')} />
               </div>
+            ) : itinerary.isLoading ? (
+              <Skeleton className="mt-4 h-32" />
             ) : (
               <ul className="mt-4 space-y-3">
-                {itineraryItems.map((item) => (
+                {itineraryItems.map((item, index) => (
                   <li
                     key={item.id}
                     className="rounded-lg border border-[var(--line)] p-3 text-sm"
@@ -806,19 +869,43 @@ export function BookingDetailPage() {
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge>{item.status}</Badge>
-                          <Button
-                            variant="secondary"
-                            onClick={() => setEditingItem(item)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            loading={deleteItem.isPending}
-                            onClick={() => deleteItem.mutate(item.id)}
-                          >
-                            Delete
-                          </Button>
+                          {canWrite ? (
+                            <>
+                              <Button
+                                variant="secondary"
+                                disabled={index === 0}
+                                loading={moveItem.isPending}
+                                onClick={() =>
+                                  moveItem.mutate({ itemId: item.id, direction: 'up' })
+                                }
+                              >
+                                ↑
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                disabled={index === itineraryItems.length - 1}
+                                loading={moveItem.isPending}
+                                onClick={() =>
+                                  moveItem.mutate({ itemId: item.id, direction: 'down' })
+                                }
+                              >
+                                ↓
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                onClick={() => setEditingItem(item)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                loading={deleteItem.isPending}
+                                onClick={() => deleteItem.mutate(item.id)}
+                              >
+                                Delete
+                              </Button>
+                            </>
+                          ) : null}
                         </div>
                       </div>
                     )}
@@ -1036,13 +1123,22 @@ export function BookingDetailPage() {
                         {formatDate(task.dueDate)} · {formatDate(task.createdAt)}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge tone={task.priority === 'urgent' ? 'danger' : 'default'}>
                         {task.priority}
                       </Badge>
                       <Badge tone={task.status === 'done' ? 'success' : 'default'}>
                         {task.status}
                       </Badge>
+                      {canWrite && task.status === 'open' ? (
+                        <Button
+                          variant="secondary"
+                          loading={completeTask.isPending}
+                          onClick={() => completeTask.mutate(task.id)}
+                        >
+                          Complete
+                        </Button>
+                      ) : null}
                     </div>
                   </li>
                 ))}
@@ -1209,6 +1305,12 @@ export function BookingDetailPage() {
       {panel === 'payment' ? (
         <DialogShell open title="Record Payment" onClose={() => setPanel(null)}>
           <div className="space-y-3">
+            <p className="text-sm text-[var(--ink-muted)]">
+              Outstanding due:{' '}
+              <strong className="text-[var(--accent)]">
+                {formatMoney(b.dueAmount ?? d?.dueAmount ?? 0)}
+              </strong>
+            </p>
             <div>
               <Label>Amount</Label>
               <Input

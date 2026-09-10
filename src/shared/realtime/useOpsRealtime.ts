@@ -48,18 +48,21 @@ export function useOpsRealtime() {
       invalidate('finance');
       invalidate('bookings');
       invalidate('dashboard');
+      invalidate('operations');
     });
     ns.on('payment.created', () => {
       invalidate('payments');
       invalidate('finance');
       invalidate('bookings');
       invalidate('dashboard');
+      invalidate('operations');
     });
     ns.on('payment.updated', () => {
       invalidate('payments');
       invalidate('finance');
       invalidate('bookings');
       invalidate('dashboard');
+      invalidate('operations');
     });
     ns.on('sos.created', () => {
       invalidate('sos');
