@@ -1,5 +1,5 @@
 /** Single backend origin for the whole Ops app. REST uses `${baseUrl}/api/v1`, socket uses `${baseUrl}/ws`. */
-const FALLBACK_BASE_URL = 'https://zeengobackend-production.up.railway.app';
+const FALLBACK_BASE_URL = 'https://zeengobackend-production-0cde.up.railway.app';
 
 function normalizeOrigin(raw: string): string {
   return raw.trim().replace(/\/$/, '').replace(/\/api\/v1$/i, '');
