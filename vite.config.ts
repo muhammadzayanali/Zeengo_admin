@@ -5,7 +5,7 @@ import path from 'node:path';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const baseUrl = (env.VITE_API_BASE_URL || 'https://zeengobackend-production.up.railway.app')
+  const baseUrl = (env.VITE_API_BASE_URL || 'https://zeengobackend-production-0cde.up.railway.app')
     .replace(/\/$/, '')
     .replace(/\/api\/v1$/i, '');
 
