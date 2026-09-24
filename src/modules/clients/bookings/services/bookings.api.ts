@@ -56,4 +56,28 @@ export const bookingsApi = {
   payments(id: string, signal?: AbortSignal) {
     return apiRequest<Payment[]>({ url: `/bookings/${id}/payments` }, signal);
   },
+  vendorBookings(id: string, signal?: AbortSignal) {
+    return apiRequest<
+      Array<{
+        id: string;
+        vendorId: string;
+        vendorName: string;
+        vendorType: string;
+        vendorCity: string | null;
+        bookingId: string;
+        znCode: string;
+        clientName: string;
+        itineraryItemId: string | null;
+        amount: number | null;
+        commissionAmount: number | null;
+        serviceDate: string | null;
+        pax: number | null;
+        details: string | null;
+        voucherCode: string | null;
+        voucherSentAt: string | null;
+        status: string;
+        createdAt: string;
+      }>
+    >({ url: `/bookings/${id}/vendor-bookings` }, signal);
+  },
 };

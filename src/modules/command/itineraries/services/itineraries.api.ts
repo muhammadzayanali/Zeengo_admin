@@ -14,6 +14,13 @@ export const itinerariesApi = {
   updateItem(itemId: string, data: Record<string, unknown>) {
     return apiRequest<ItineraryItem>({ method: 'PATCH', url: `/itinerary/items/${itemId}`, data });
   },
+  moveItem(itemId: string, direction: 'up' | 'down') {
+    return apiRequest<ItineraryItem>({
+      method: 'POST',
+      url: `/itinerary/items/${itemId}/move`,
+      data: { direction },
+    });
+  },
   deleteItem(itemId: string) {
     return apiRequest({ method: 'DELETE', url: `/itinerary/items/${itemId}` });
   },

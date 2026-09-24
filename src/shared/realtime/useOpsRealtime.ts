@@ -48,27 +48,34 @@ export function useOpsRealtime() {
       invalidate('finance');
       invalidate('bookings');
       invalidate('dashboard');
+      invalidate('operations');
     });
     ns.on('payment.created', () => {
       invalidate('payments');
       invalidate('finance');
       invalidate('bookings');
       invalidate('dashboard');
+      invalidate('operations');
     });
     ns.on('payment.updated', () => {
       invalidate('payments');
       invalidate('finance');
       invalidate('bookings');
       invalidate('dashboard');
+      invalidate('operations');
     });
     ns.on('sos.created', () => {
       invalidate('sos');
       invalidate('dashboard');
+      invalidate('bookings');
+      invalidate('operations');
       push({ tone: 'error', title: 'New SOS alert' });
     });
     ns.on('sos.resolved', () => {
       invalidate('sos');
       invalidate('dashboard');
+      invalidate('bookings');
+      invalidate('operations');
     });
     ns.on('message.new', (payload: ChatMessage) => {
       if (payload?.conversationId) {
@@ -126,10 +133,18 @@ export function useOpsRealtime() {
       invalidate('tasks');
       invalidate('dashboard');
       invalidate('daily-operations');
+      invalidate('bookings');
+      invalidate('operations');
     });
     ns.on('booking.created', () => {
       invalidate('bookings');
       invalidate('dashboard');
+      invalidate('operations');
+    });
+    ns.on('booking.updated', () => {
+      invalidate('bookings');
+      invalidate('dashboard');
+      invalidate('operations');
     });
     ns.on('driver.updated', () => {
       invalidate('drivers');
@@ -143,6 +158,7 @@ export function useOpsRealtime() {
       invalidate('drivers');
       invalidate('dashboard');
       invalidate('operations');
+      invalidate('bookings');
       if (payload?.status === 'rejected') {
         push({ tone: 'error', title: 'Driver declined assignment' });
       } else if (payload?.status === 'accepted') {
@@ -166,10 +182,14 @@ export function useOpsRealtime() {
     ns.on('edit_request.created', () => {
       invalidate('edit-requests');
       invalidate('dashboard');
+      invalidate('bookings');
+      invalidate('operations');
     });
     ns.on('edit_request.updated', () => {
       invalidate('edit-requests');
       invalidate('dashboard');
+      invalidate('bookings');
+      invalidate('operations');
     });
 
     const vendorHandler = () => {
