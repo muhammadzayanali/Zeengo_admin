@@ -440,6 +440,11 @@ export interface FinanceSummary {
     stripe: { amount: number; count: number };
     cash: { amount: number; count: number };
   };
+  allTime: {
+    paid: { amount: number; count: number };
+    stripe: { amount: number; count: number };
+    cash: { amount: number; count: number };
+  };
   pending: { amount: number; count: number };
 }
 

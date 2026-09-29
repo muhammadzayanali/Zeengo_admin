@@ -67,6 +67,7 @@ export function DashboardPage() {
   });
 
   const [assignOpen, setAssignOpen] = useState(false);
+  const [assignStep, setAssignStep] = useState<'clients' | 'drivers'>('clients');
   const [assignBooking, setAssignBooking] = useState<DashboardUnassignedClient | null>(
     null,
   );
@@ -100,6 +101,28 @@ export function DashboardPage() {
       }),
     [drivers],
   );
+
+  function openUnassignedPool() {
+    if (!unassigned.length) {
+      navigate('/clients');
+      return;
+    }
+    setAssignBooking(null);
+    setAssignStep('clients');
+    setAssignOpen(true);
+  }
+
+  function openAssignForClient(client: DashboardUnassignedClient) {
+    setAssignBooking(client);
+    setAssignStep('drivers');
+    setAssignOpen(true);
+  }
+
+  function closeAssignModal() {
+    setAssignOpen(false);
+    setAssignBooking(null);
+    setAssignStep('clients');
+  }
 
   async function openEod() {
     setEodLoading(true);
@@ -148,8 +171,7 @@ export function DashboardPage() {
         startDate,
       });
       push({ tone: 'success', title: 'Driver assigned' });
-      setAssignOpen(false);
-      setAssignBooking(null);
+      closeAssignModal();
       await qc.invalidateQueries({ queryKey: ['dashboard'] });
     } catch (err) {
       push({
@@ -260,14 +282,7 @@ export function DashboardPage() {
           value={k.unassignedClients}
           tone={k.unassignedClients ? 'danger' : 'default'}
           hint={k.unassignedClients ? 'Assign now →' : 'All matched'}
-          onClick={() => {
-            if (unassigned[0]) {
-              setAssignBooking(unassigned[0]);
-              setAssignOpen(true);
-            } else {
-              navigate('/clients');
-            }
-          }}
+          onClick={openUnassignedPool}
         />
       </div>
 
@@ -392,16 +407,7 @@ export function DashboardPage() {
         title="Unassigned clients"
         description={`${k.unassignedClients} active without a primary driver`}
         action={
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              if (unassigned[0]) {
-                setAssignBooking(unassigned[0]);
-                setAssignOpen(true);
-              }
-            }}
-          >
+          <Button type="button" variant="secondary" onClick={openUnassignedPool}>
             <UserPlus className="h-4 w-4" />
             Assign now →
           </Button>
@@ -434,10 +440,7 @@ export function DashboardPage() {
                       <Button
                         type="button"
                         variant="secondary"
-                        onClick={() => {
-                          setAssignBooking(c);
-                          setAssignOpen(true);
-                        }}
+                        onClick={() => openAssignForClient(c)}
                       >
                         Assign
                       </Button>
@@ -450,32 +453,93 @@ export function DashboardPage() {
         )}
       </AnalyticsCard>
 
-      <DialogShell open={assignOpen} title="Assign driver" onClose={() => setAssignOpen(false)}>
-        <p className="mb-3 text-sm text-[var(--ink-muted)]">
-          Client: {assignBooking ? `${assignBooking.clientName} · ${assignBooking.znCode}` : '—'}
-        </p>
-        <div className={cn('space-y-2', assigning && 'pointer-events-none opacity-60')}>
-          {!availableDrivers.length ? (
-            <p className="text-sm text-[var(--ink-muted)]">
-              No available drivers. Check the Drivers roster.
+      <DialogShell
+        open={assignOpen}
+        title={
+          assignStep === 'clients'
+            ? `Unassigned clients (${unassigned.length})`
+            : 'Assign driver'
+        }
+        onClose={closeAssignModal}
+      >
+        {assignStep === 'clients' ? (
+          <>
+            <p className="mb-3 text-sm text-[var(--ink-muted)]">
+              {k.unassignedClients} active booking
+              {k.unassignedClients === 1 ? '' : 's'} without a primary driver.
+              Pick a client, then choose a driver.
             </p>
-          ) : (
-            availableDrivers.map((d) => (
+            <div className="space-y-2">
+              {unassigned.map((c) => (
+                <button
+                  key={c.bookingId}
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2.5 text-start hover:bg-[var(--bg-muted)]"
+                  onClick={() => openAssignForClient(c)}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold">
+                      {c.znCode} · {c.clientName}
+                    </span>
+                    <span className="block text-xs text-[var(--ink-muted)]">
+                      {[c.packageName, c.arrivalDate ? `Arrival ${c.arrivalDate}` : null]
+                        .filter(Boolean)
+                        .join(' · ') || 'No package'}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold text-[var(--accent)]">
+                    Assign →
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-[var(--ink-muted)]">
+                Client:{' '}
+                {assignBooking
+                  ? `${assignBooking.clientName} · ${assignBooking.znCode}`
+                  : '—'}
+              </p>
               <button
-                key={d.id}
                 type="button"
-                className="flex w-full items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-start hover:bg-[var(--bg-muted)]"
-                onClick={() => void doAssign(d.id)}
+                className="text-xs font-semibold text-[var(--accent)] hover:underline"
+                onClick={() => {
+                  setAssignBooking(null);
+                  setAssignStep('clients');
+                }}
               >
-                <span>
-                  <span className="block text-sm font-medium">{d.fullName}</span>
-                  <span className="text-xs text-[var(--ink-muted)]">{vehicleLabel(d)}</span>
-                </span>
-                <StatusBadge tone={dTone(d.status)}>{d.status}</StatusBadge>
+                ← All unassigned
               </button>
-            ))
-          )}
-        </div>
+            </div>
+            <div className={cn('space-y-2', assigning && 'pointer-events-none opacity-60')}>
+              {!availableDrivers.length ? (
+                <p className="text-sm text-[var(--ink-muted)]">
+                  No available drivers. Check the Drivers roster.
+                </p>
+              ) : (
+                availableDrivers.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-start hover:bg-[var(--bg-muted)]"
+                    onClick={() => void doAssign(d.id)}
+                  >
+                    <span>
+                      <span className="block text-sm font-medium">{d.fullName}</span>
+                      <span className="text-xs text-[var(--ink-muted)]">
+                        {vehicleLabel(d)}
+                      </span>
+                    </span>
+                    <StatusBadge tone={dTone(d.status)}>{d.status}</StatusBadge>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </DialogShell>
 
       <DialogShell open={eodOpen} title="End of Day report" onClose={() => setEodOpen(false)} wide>

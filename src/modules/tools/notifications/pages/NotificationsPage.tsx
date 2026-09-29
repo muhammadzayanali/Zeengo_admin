@@ -33,7 +33,7 @@ export function NotificationsPage() {
 
   const notificationsQuery = useQuery({
     queryKey: ['notifications', { page, filter }],
-    queryFn: ({ signal }) => notificationsApi.list({ page, limit: 20, filter }, signal),
+    queryFn: ({ signal }) => notificationsApi.list({ page, limit: 15, filter }, signal),
   });
 
   async function handleMarkRead(id: string) {

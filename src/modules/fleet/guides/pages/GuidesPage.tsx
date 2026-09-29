@@ -68,7 +68,7 @@ export function GuidesPage() {
   const listQuery = useQuery({
     queryKey: vendorKeys.list({ type: 'guide', page, search: q }),
     queryFn: ({ signal }) =>
-      vendorsApi.list({ type: 'guide', page, limit: 20, search: q || undefined }, signal),
+      vendorsApi.list({ type: 'guide', page, limit: 15, search: q || undefined }, signal),
   });
 
   const bookingsQuery = useQuery({
@@ -270,7 +270,7 @@ export function GuidesPage() {
           <div className="mt-4">
             <Pagination
               page={listQuery.data?.meta.page ?? page}
-              limit={listQuery.data?.meta.limit ?? 20}
+              limit={listQuery.data?.meta.limit ?? 15}
               total={listQuery.data?.meta.total ?? 0}
               onPageChange={setPage}
             />

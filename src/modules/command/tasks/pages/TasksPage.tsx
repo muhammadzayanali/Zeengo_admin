@@ -37,7 +37,7 @@ export function TasksPage() {
     queryKey: ['tasks', { page, status, priority }],
     queryFn: ({ signal }) =>
       tasksApi.list(
-        { page, limit: 20, status: status || undefined, priority: priority || undefined },
+        { page, limit: 15, status: status || undefined, priority: priority || undefined },
         signal,
       ),
   });

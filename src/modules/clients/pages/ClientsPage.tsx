@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorState,
   PageScaffold,
+  Pagination,
   SearchBar,
   Select,
   Skeleton,
@@ -16,6 +17,7 @@ import {
   useToast,
 } from '@/shared/ui';
 import { formatDate, formatMoney } from '@/shared/lib/cn';
+import { PAGE_SIZE } from '@/shared/lib/pagination';
 import type { BookingStatus } from '@/shared/api/types';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
@@ -33,7 +35,7 @@ export function ClientsPage() {
       bookingsApi.list(
         {
           page,
-          limit: 50,
+          limit: PAGE_SIZE,
           search: debouncedQ || undefined,
           status: status || undefined,
         },
@@ -42,29 +44,31 @@ export function ClientsPage() {
   });
 
   const rows = bookingsQuery.data?.data ?? [];
+  const meta = bookingsQuery.data?.meta;
 
   const stats = useMemo(() => {
     return {
-      total: bookingsQuery.data?.meta.total ?? rows.length,
+      total: meta?.total ?? rows.length,
       active: rows.filter((b) => b.status === 'active').length,
       vip: rows.filter((b) => b.isVip).length,
-      unassigned: rows.filter((b) => b.status === 'active' && !b.activeDriverAssignment).length,
+      unassigned: rows.filter((b) => b.status === 'active' && !b.activeDriverAssignment)
+        .length,
     };
-  }, [bookingsQuery.data, rows]);
+  }, [meta, rows]);
 
   return (
     <PageScaffold
       title="Clients"
-      description="Client bookings stored in the database — ZN codes, packages, drivers, and payments."
+      description="Client bookings with ZN codes — includes guests imported from ZEENTRAVEL Kitchen Excel."
       primaryAction={
         <Button onClick={() => navigate('/clients/new')}>+ Add New Client</Button>
       }
       stats={
         <>
           <StatsCard label="Total" value={stats.total} />
-          <StatsCard label="Active" value={stats.active} tone="success" />
-          <StatsCard label="VIP" value={stats.vip} tone="accent" />
-          <StatsCard label="Unassigned" value={stats.unassigned} tone="warning" />
+          <StatsCard label="Active (page)" value={stats.active} tone="success" />
+          <StatsCard label="VIP (page)" value={stats.vip} tone="accent" />
+          <StatsCard label="Unassigned (page)" value={stats.unassigned} tone="warning" />
         </>
       }
       filters={
@@ -114,110 +118,125 @@ export function ClientsPage() {
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead className="sticky top-0 bg-[var(--bg-muted)] text-xs font-medium uppercase text-[var(--ink-muted)]">
-                <tr>
-                  <th className="px-4 py-3 text-start">Client ID</th>
-                  <th className="px-4 py-3 text-start">Name</th>
-                  <th className="px-4 py-3 text-start">Contact</th>
-                  <th className="px-4 py-3 text-start">Package</th>
-                  <th className="px-4 py-3 text-start">Driver</th>
-                  <th className="px-4 py-3 text-start">Trip</th>
-                  <th className="px-4 py-3 text-start">Status</th>
-                  <th className="px-4 py-3 text-end">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((b) => (
-                  <tr
-                    key={b.id}
-                    className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--bg-muted)]/70"
-                    onClick={() => navigate(`/clients/${b.id}`)}
-                  >
-                    <td className="px-4 py-3 font-medium">{b.znCode}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-[var(--accent)]">
-                        {b.client?.fullName ?? '—'}
-                      </span>
-                      {b.isVip ? (
-                        <StatusBadge tone="accent" className="ms-2">
-                          VIP
-                        </StatusBadge>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--ink-muted)]">
-                      <div>{b.client?.phone}</div>
-                      <div className="text-xs">{b.client?.email}</div>
-                    </td>
-                    <td className="px-4 py-3">{b.package?.name ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      {b.activeDriverAssignment?.driverName ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>{b.activeDriverAssignment.driverName}</span>
-                          {b.activeDriverAssignment.status &&
-                          b.activeDriverAssignment.status !== 'in_progress' ? (
-                            <StatusBadge
-                              tone={
-                                b.activeDriverAssignment.status === 'pending'
-                                  ? 'warning'
-                                  : b.activeDriverAssignment.status === 'accepted'
-                                    ? 'accent'
-                                    : 'default'
-                              }
-                            >
-                              {b.activeDriverAssignment.status.replace(/_/g, ' ')}
-                            </StatusBadge>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="text-[var(--danger)]">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[var(--ink-muted)]">
-                      {formatDate(b.arrivalDate)} → {formatDate(b.departureDate)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge
-                        tone={
-                          b.status === 'active'
-                            ? 'success'
-                            : b.status === 'cancelled'
-                              ? 'danger'
-                              : 'default'
-                        }
-                      >
-                        {b.status}
-                      </StatusBadge>
-                    </td>
-                    <td className="px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
-                      <ActionDropdown
-                        items={[
-                          {
-                            id: 'view',
-                            label: 'Open profile',
-                            onClick: () => navigate(`/clients/${b.id}`),
-                          },
-                          {
-                            id: 'driver',
-                            label: 'Assign driver…',
-                            onClick: () => navigate(`/clients/${b.id}?panel=driver`),
-                          },
-                          {
-                            id: 'amount',
-                            label: formatMoney(b.totalAmount),
-                            onClick: () => push({ tone: 'success', title: 'Total amount shown' }),
-                          },
-                        ]}
-                      />
-                    </td>
+        <>
+          <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead className="sticky top-0 bg-[var(--bg-muted)] text-xs font-medium uppercase text-[var(--ink-muted)]">
+                  <tr>
+                    <th className="px-4 py-3 text-start">Client ID</th>
+                    <th className="px-4 py-3 text-start">Name</th>
+                    <th className="px-4 py-3 text-start">Contact</th>
+                    <th className="px-4 py-3 text-start">Package</th>
+                    <th className="px-4 py-3 text-start">Driver</th>
+                    <th className="px-4 py-3 text-start">Trip</th>
+                    <th className="px-4 py-3 text-start">Status</th>
+                    <th className="px-4 py-3 text-end">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((b) => (
+                    <tr
+                      key={b.id}
+                      className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--bg-muted)]/70"
+                      onClick={() => navigate(`/clients/${b.id}`)}
+                    >
+                      <td className="px-4 py-3 font-medium">{b.znCode}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-[var(--accent)]">
+                          {b.client?.fullName ?? '—'}
+                        </span>
+                        {b.isVip ? (
+                          <StatusBadge tone="accent" className="ms-2">
+                            VIP
+                          </StatusBadge>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--ink-muted)]">
+                        <div>{b.client?.phone}</div>
+                        <div className="text-xs">{b.client?.email}</div>
+                      </td>
+                      <td className="px-4 py-3">{b.package?.name ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        {b.activeDriverAssignment?.driverName ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{b.activeDriverAssignment.driverName}</span>
+                            {b.activeDriverAssignment.status &&
+                            b.activeDriverAssignment.status !== 'in_progress' ? (
+                              <StatusBadge
+                                tone={
+                                  b.activeDriverAssignment.status === 'pending'
+                                    ? 'warning'
+                                    : b.activeDriverAssignment.status === 'accepted'
+                                      ? 'accent'
+                                      : 'default'
+                                }
+                              >
+                                {b.activeDriverAssignment.status.replace(/_/g, ' ')}
+                              </StatusBadge>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-[var(--danger)]">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-[var(--ink-muted)]">
+                        {formatDate(b.arrivalDate)} → {formatDate(b.departureDate)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge
+                          tone={
+                            b.status === 'active'
+                              ? 'success'
+                              : b.status === 'cancelled'
+                                ? 'danger'
+                                : 'default'
+                          }
+                        >
+                          {b.status}
+                        </StatusBadge>
+                      </td>
+                      <td
+                        className="px-4 py-3 text-end"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ActionDropdown
+                          items={[
+                            {
+                              id: 'view',
+                              label: 'Open profile',
+                              onClick: () => navigate(`/clients/${b.id}`),
+                            },
+                            {
+                              id: 'driver',
+                              label: 'Assign driver…',
+                              onClick: () =>
+                                navigate(`/clients/${b.id}?panel=driver`),
+                            },
+                            {
+                              id: 'amount',
+                              label: formatMoney(b.totalAmount),
+                              onClick: () =>
+                                push({ tone: 'success', title: 'Total amount shown' }),
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+          <div className="mt-4">
+            <Pagination
+              page={meta?.page ?? page}
+              limit={meta?.limit ?? PAGE_SIZE}
+              total={meta?.total ?? 0}
+              onPageChange={setPage}
+            />
+          </div>
+        </>
       )}
     </PageScaffold>
   );

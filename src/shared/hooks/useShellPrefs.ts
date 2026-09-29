@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18n from '@/shared/i18n';
+import i18n, {
+  localeLabel,
+  nextLocale,
+  normalizeLocale,
+  type AppLocale,
+} from '@/shared/i18n';
 
 type Theme = 'light' | 'dark';
-type Locale = 'en' | 'ar';
 
 const THEME_KEY = 'zeengo_theme';
 const LOCALE_KEY = 'zeengo_locale';
@@ -13,7 +17,7 @@ function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = theme;
 }
 
-function applyLocale(locale: Locale) {
+function applyLocale(locale: AppLocale) {
   document.documentElement.lang = locale;
   document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
   void i18n.changeLanguage(locale);
@@ -38,10 +42,9 @@ export function useTheme() {
 
 export function useLocale() {
   const { i18n: i18nInstance } = useTranslation();
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const stored = localStorage.getItem(LOCALE_KEY);
-    return stored === 'ar' ? 'ar' : 'en';
-  });
+  const [locale, setLocaleState] = useState<AppLocale>(() =>
+    normalizeLocale(localStorage.getItem(LOCALE_KEY)),
+  );
 
   useEffect(() => {
     applyLocale(locale);
@@ -50,7 +53,7 @@ export function useLocale() {
 
   useEffect(() => {
     const onLang = (lng: string) => {
-      setLocaleState(lng === 'ar' ? 'ar' : 'en');
+      setLocaleState(normalizeLocale(lng));
     };
     i18nInstance.on('languageChanged', onLang);
     return () => {
@@ -60,7 +63,9 @@ export function useLocale() {
 
   return {
     locale,
-    toggleLocale: () => setLocaleState((l) => (l === 'ar' ? 'en' : 'ar')),
+    localeLabel: localeLabel(locale),
+    setLocale: setLocaleState,
+    toggleLocale: () => setLocaleState((l) => nextLocale(l)),
   };
 }
 
