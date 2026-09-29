@@ -163,7 +163,7 @@ export function OperationsPage() {
   const listQuery = useQuery({
     queryKey: ['operations', 'clients', { page, search: q }],
     queryFn: ({ signal }) =>
-      operationsApi.clients({ page, limit: 20, search: q || undefined }, signal),
+      operationsApi.clients({ page, limit: 15, search: q || undefined }, signal),
   });
 
   const urgentQuery = useQuery({
@@ -485,7 +485,7 @@ export function OperationsPage() {
           <div className="border-t border-[var(--line)] px-4 py-3">
             <Pagination
               page={listQuery.data?.meta.page ?? page}
-              limit={listQuery.data?.meta.limit ?? 20}
+              limit={listQuery.data?.meta.limit ?? 15}
               total={listQuery.data?.meta.total ?? 0}
               onPageChange={setPage}
             />

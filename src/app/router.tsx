@@ -77,6 +77,11 @@ const VendorsPage = lazy(() =>
     default: m.VendorsPage,
   })),
 );
+const MasterDataImportPage = lazy(() =>
+  import('@/modules/admin/master-data/pages/MasterDataImportPage').then((m) => ({
+    default: m.MasterDataImportPage,
+  })),
+);
 const EditRequestsPage = lazy(() =>
   import('@/modules/clients/edit-requests/pages/EditRequestsPage').then((m) => ({
     default: m.EditRequestsPage,
@@ -306,6 +311,14 @@ export function AppRouter() {
             element={
               <L>
                 <VendorsPage />
+              </L>
+            }
+          />
+          <Route
+            path="/master-data-import"
+            element={
+              <L>
+                <MasterDataImportPage />
               </L>
             }
           />

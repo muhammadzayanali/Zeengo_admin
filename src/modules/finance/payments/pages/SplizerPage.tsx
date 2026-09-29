@@ -96,7 +96,7 @@ export function SplizerPage() {
       paymentsApi.splizerClients(
         {
           page,
-          limit: 24,
+          limit: 15,
           search: search || undefined,
           status: status || undefined,
         },
@@ -112,7 +112,7 @@ export function SplizerPage() {
 
   const historyQuery = useQuery({
     queryKey: ['payments', 'history', { page: histPage }],
-    queryFn: ({ signal }) => paymentsApi.history({ page: histPage, limit: 20 }, signal),
+    queryFn: ({ signal }) => paymentsApi.history({ page: histPage, limit: 15 }, signal),
     enabled: tab === 'history',
   });
 
@@ -634,7 +634,7 @@ export function SplizerPage() {
               <div className="border-t border-[var(--line)] px-4 py-3">
                 <Pagination
                   page={historyQuery.data?.meta.page ?? histPage}
-                  limit={historyQuery.data?.meta.limit ?? 20}
+                  limit={historyQuery.data?.meta.limit ?? 15}
                   total={historyQuery.data?.meta.total ?? 0}
                   onPageChange={setHistPage}
                 />

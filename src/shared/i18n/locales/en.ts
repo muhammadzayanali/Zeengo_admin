@@ -79,6 +79,7 @@ const en = {
     users: 'Users',
     roles: 'Roles',
     settings: 'Settings',
+    masterDataImport: 'Excel Import',
     ai: 'Ops Agent',
     aiParser: 'AI Parser',
     russiaChatbot: 'Russia Chatbot',
@@ -296,11 +297,13 @@ const en = {
 
   finance: {
     title: 'Finance',
-    description: "Today's collections, payment mix, and the full ledger.",
+    description: "Today's collections vs all-time paid mix, and the full ledger.",
     loadFailed: 'Could not load finance summary.',
     today: 'Today',
     stripeToday: 'Stripe',
     cashToday: 'Cash',
+    stripeAllTime: 'Stripe paid',
+    cashAllTime: 'Cash paid',
     pending: 'Pending',
     paymentsCount: '{{count}} payments',
     revenueByMethod: 'Revenue analytics',

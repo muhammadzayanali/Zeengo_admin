@@ -72,6 +72,7 @@ const ar: TranslationSchema = {
     b2bPartners: 'شركاء B2B',
     tasks: 'المهام',
     vendors: 'الموردون',
+    masterDataImport: 'استيراد Excel',
     editRequests: 'طلبات التعديل',
     vip: 'زين رفيق VIP',
     sos: 'تنبيهات الطوارئ',
@@ -298,11 +299,13 @@ const ar: TranslationSchema = {
 
   finance: {
     title: 'المالية',
-    description: 'تحصيلات اليوم ومزيج الدفعات وسجل المدفوعات الكامل.',
+    description: 'تحصيلات اليوم مقابل المزيج المدفوع الإجمالي، وسجل المدفوعات الكامل.',
     loadFailed: 'تعذر تحميل الملخص المالي.',
     today: 'اليوم',
     stripeToday: 'سترايب',
     cashToday: 'نقد',
+    stripeAllTime: 'سترايب المدفوع',
+    cashAllTime: 'نقد مدفوع',
     pending: 'قيد الانتظار',
     paymentsCount: '{{count}} مدفوعات',
     revenueByMethod: 'تحليل الإيراد',

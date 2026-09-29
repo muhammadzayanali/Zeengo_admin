@@ -27,7 +27,7 @@ import type { EditRequest } from '@/shared/api/types';
 
 type StatusTab = 'pending' | 'approved' | 'rejected' | 'all';
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 15;
 
 const TYPE_LABELS: Record<string, string> = {
   date_change: 'Date change',
@@ -61,11 +61,44 @@ function cleanReason(reason: string | null | undefined) {
   return reason.replace(/^\[seed\]\s*/i, '').trim();
 }
 
+function formatCell(value: unknown): string {
+  if (value == null) return '—';
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) return value.map(formatCell).join(', ');
+    return Object.entries(value as Record<string, unknown>)
+      .map(([k, v]) => `${k}: ${formatCell(v)}`)
+      .join(', ');
+  }
+  return String(value);
+}
+
 function formatValue(raw: string | null | undefined): string {
   if (!raw?.trim()) return '—';
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      if (parsed.source === 'website_catalog') {
+        const bits = [
+          parsed.kind === 'car' && parsed.carKind === 'driver'
+            ? 'Driver selection'
+            : parsed.kind === 'car'
+              ? 'Vehicle class'
+              : parsed.kind
+                ? String(parsed.kind)
+                : 'Catalog',
+          parsed.title ? String(parsed.title) : null,
+          parsed.detail ? String(parsed.detail) : null,
+          parsed.driverProfileId
+            ? `driverId ${String(parsed.driverProfileId)}`
+            : parsed.itemId
+              ? `id ${String(parsed.itemId)}`
+              : null,
+          parsed.context && typeof parsed.context === 'object'
+            ? formatCell(parsed.context)
+            : null,
+        ].filter(Boolean);
+        return bits.join(' · ');
+      }
       if ('arrivalDate' in parsed || 'departureDate' in parsed) {
         const a = parsed.arrivalDate == null ? '—' : String(parsed.arrivalDate);
         const d = parsed.departureDate == null ? '—' : String(parsed.departureDate);
@@ -75,7 +108,7 @@ function formatValue(raw: string | null | undefined): string {
         return parsed.isVip ? 'VIP' : 'Standard';
       }
       return Object.entries(parsed)
-        .map(([k, v]) => `${k}: ${v == null ? '—' : String(v)}`)
+        .map(([k, v]) => `${k}: ${formatCell(v)}`)
         .join(' · ');
     }
   } catch {

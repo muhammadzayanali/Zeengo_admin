@@ -284,7 +284,7 @@ export function EmailPage() {
                 <div className="border-t border-[var(--line)] px-4 py-3">
                   <Pagination
                     page={logsQuery.data?.meta.page ?? page}
-                    limit={logsQuery.data?.meta.limit ?? 20}
+                    limit={logsQuery.data?.meta.limit ?? 15}
                     total={logsQuery.data?.meta.total ?? 0}
                     onPageChange={setPage}
                   />

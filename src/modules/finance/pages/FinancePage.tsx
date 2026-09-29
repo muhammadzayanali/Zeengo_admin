@@ -116,7 +116,7 @@ export function FinancePage() {
       paymentsApi.history(
         {
           page,
-          limit: 20,
+          limit: 15,
           status: status || undefined,
           method: method || undefined,
         },
@@ -145,14 +145,14 @@ export function FinancePage() {
               tone="accent"
             />
             <StatsCard
-              label={t('finance.stripeToday')}
-              value={formatMoney(summary.today.stripe.amount)}
-              hint={t('finance.paymentsCount', { count: summary.today.stripe.count })}
+              label={t('finance.stripeAllTime')}
+              value={formatMoney(summary.allTime?.stripe.amount ?? summary.today.stripe.amount)}
+              hint={t('finance.paymentsCount', { count: summary.allTime?.stripe.count ?? summary.today.stripe.count })}
             />
             <StatsCard
-              label={t('finance.cashToday')}
-              value={formatMoney(summary.today.cash.amount)}
-              hint={t('finance.paymentsCount', { count: summary.today.cash.count })}
+              label={t('finance.cashAllTime')}
+              value={formatMoney(summary.allTime?.cash.amount ?? summary.today.cash.amount)}
+              hint={t('finance.paymentsCount', { count: summary.allTime?.cash.count ?? summary.today.cash.count })}
               tone="success"
             />
             <StatsCard
@@ -201,7 +201,13 @@ export function FinancePage() {
               points={seriesQuery.data.points}
               grain={seriesQuery.data.grain}
               range={seriesQuery.data.range}
-              locale={i18n.language?.startsWith('ar') ? 'ar' : 'en-GB'}
+              locale={
+                i18n.language?.startsWith('ar')
+                  ? 'ar'
+                  : i18n.language?.startsWith('ru')
+                    ? 'ru-RU'
+                    : 'en-GB'
+              }
             />
             <p className="mt-3 text-xs text-[var(--ink-muted)]">
               {t('finance.total', {
@@ -315,7 +321,7 @@ export function FinancePage() {
             <div className="border-t border-[var(--line)] px-4 py-3">
               <Pagination
                 page={ledgerQuery.data?.meta.page ?? page}
-                limit={ledgerQuery.data?.meta.limit ?? 20}
+                limit={ledgerQuery.data?.meta.limit ?? 15}
                 total={ledgerQuery.data?.meta.total ?? 0}
                 onPageChange={setPage}
               />

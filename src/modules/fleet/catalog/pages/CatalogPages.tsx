@@ -75,7 +75,7 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
   const listQuery = useQuery({
     queryKey: vendorKeys.list({ type, page, search: q }),
     queryFn: ({ signal }) =>
-      vendorsApi.list({ type, page, limit: 20, search: q || undefined }, signal),
+      vendorsApi.list({ type, page, limit: 15, search: q || undefined }, signal),
   });
 
   const bookingsQuery = useQuery({
@@ -296,7 +296,7 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
           <div className="border-t border-[var(--line)] px-4 py-3">
             <Pagination
               page={listQuery.data?.meta.page ?? page}
-              limit={listQuery.data?.meta.limit ?? 20}
+              limit={listQuery.data?.meta.limit ?? 15}
               total={listQuery.data?.meta.total ?? 0}
               onPageChange={setPage}
             />

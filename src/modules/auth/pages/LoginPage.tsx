@@ -11,15 +11,13 @@ import {
   type LoginFormValues,
 } from '@/modules/auth/validation/login.schema';
 import { ApiClientError } from '@/shared/api/client';
-import { useLocale } from '@/shared/hooks/useShellPrefs';
-import { Button, FieldError, Input, Label, useToast } from '@/shared/ui';
+import { Button, FieldError, Input, Label, LanguageDropdown, useToast } from '@/shared/ui';
 
 const RUSSIA_HERO =
   'https://images.unsplash.com/photo-1513326738677-b964603b136d?auto=format&fit=crop&w=1600&q=80';
 
 export function LoginPage() {
   const { t } = useTranslation();
-  const { locale, toggleLocale } = useLocale();
   const { login } = useAuth();
   const navigate = useNavigate();
   const { push } = useToast();
@@ -82,14 +80,11 @@ export function LoginPage() {
       </section>
 
       <section className="relative flex items-center justify-center bg-[var(--bg)] p-6 text-[var(--ink)]">
-        <button
-          type="button"
-          onClick={toggleLocale}
-          className="absolute end-4 top-4 inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--bg-elevated)] px-3 py-2 text-sm font-semibold text-[var(--ink-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--ink)]"
-          aria-label={t('toggleLanguage')}
-        >
-          {locale === 'ar' ? 'AR' : 'EN'}
-        </button>
+        <div className="absolute end-4 top-4">
+          <LanguageDropdown
+            buttonClassName="border border-[var(--line)] bg-[var(--bg-elevated)] text-[var(--ink-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--ink)]"
+          />
+        </div>
         <form
           onSubmit={onSubmit}
           className="w-full max-w-md space-y-5"

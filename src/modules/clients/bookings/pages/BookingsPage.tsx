@@ -57,7 +57,7 @@ export function BookingsPage() {
       bookingsApi.list(
         {
           page,
-          limit: 20,
+          limit: 15,
           search: debouncedSearch || undefined,
           status: status || undefined,
         },

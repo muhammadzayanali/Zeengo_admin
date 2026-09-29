@@ -24,7 +24,7 @@ export const emailsApi = {
   },
   list(page = 1, signal?: AbortSignal) {
     return apiList<EmailLogItem>(
-      { url: '/emails', params: toQuery({ page, limit: 20 }) },
+      { url: '/emails', params: toQuery({ page, limit: 15 }) },
       signal,
     );
   },

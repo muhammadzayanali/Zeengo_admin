@@ -9,11 +9,11 @@ import { useTranslation } from 'react-i18next';
 import {
   initials,
   roleBadge,
-  useLocale,
   useRoleLabel,
   useTheme,
 } from '@/shared/hooks/useShellPrefs';
 import { cn } from '@/shared/lib/cn';
+import { LanguageDropdown } from '@/shared/ui/LanguageDropdown';
 
 export function TopHeader({
   onMenuClick,
@@ -25,7 +25,6 @@ export function TopHeader({
   const { user, logout, hasRole, homePath, can } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { locale, toggleLocale } = useLocale();
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -155,15 +154,7 @@ export function TopHeader({
         >
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </IconButton>
-        <button
-          type="button"
-          onClick={toggleLocale}
-          className="inline-flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm font-semibold text-[var(--shell-muted)] hover:bg-[var(--shell-elevated)] hover:text-[var(--shell-ink)]"
-          aria-label={t('toggleLanguage')}
-        >
-          <GlobeIcon />
-          <span>{locale === 'ar' ? 'AR' : 'EN'}</span>
-        </button>
+        <LanguageDropdown />
         <Link
           to="/notifications"
           className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--shell-muted)] hover:bg-[var(--shell-elevated)] hover:text-[var(--shell-ink)]"
@@ -296,15 +287,6 @@ function MoonIcon() {
         strokeWidth="2"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
-      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
 }

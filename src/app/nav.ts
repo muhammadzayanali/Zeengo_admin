@@ -262,6 +262,12 @@ export const NAV_SECTIONS: NavSection[] = [
     sectionKey: 'nav.sections.admin',
     items: [
       {
+        to: '/master-data-import',
+        labelKey: 'nav.masterDataImport',
+        roles: ROLE_PERMISSIONS.masterDataImport,
+        icon: FilePenLine,
+      },
+      {
         to: '/users',
         labelKey: 'nav.users',
         roles: ROLE_PERMISSIONS.users,

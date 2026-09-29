@@ -38,7 +38,7 @@ export function PaymentsPage() {
   const historyQuery = useQuery({
     queryKey: ['payments', 'history', { page, search: debouncedSearch }],
     queryFn: ({ signal }) =>
-      paymentsApi.history({ page, limit: 20, search: debouncedSearch || undefined }, signal),
+      paymentsApi.history({ page, limit: 15, search: debouncedSearch || undefined }, signal),
   });
 
   const paidOnPage = useMemo(
