@@ -43,14 +43,14 @@ export type ClientItinerary = {
 };
 
 export const clientPortalApi = {
-  znLogin(znCode: string) {
+  znLogin(znCode: string, phone: string) {
     return apiRequest<{
       accessToken: string;
       refreshToken: string;
       bookingId: string;
       znCode: string;
       user: { id: string; fullName: string; phone: string; preferredLang: string; type: 'client' };
-    }>({ method: 'POST', url: '/auth/client/zn-login', data: { znCode } });
+    }>({ method: 'POST', url: '/auth/client/zn-login', data: { znCode, phone } });
   },
   home(signal?: AbortSignal) {
     return apiRequest<ClientHome>({ url: '/client/home' }, signal);

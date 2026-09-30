@@ -66,6 +66,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
 function ClientLoginPage() {
   const navigate = useNavigate();
   const [znCode, setZnCode] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -74,7 +75,7 @@ function ClientLoginPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await clientPortalApi.znLogin(znCode.trim());
+      const res = await clientPortalApi.znLogin(znCode.trim(), phone.trim());
       setTokens(res.accessToken, res.refreshToken);
       saveClientSession({ znCode: res.znCode, fullName: res.user.fullName });
       navigate('/client');
@@ -88,7 +89,7 @@ function ClientLoginPage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
       <h1 className="mb-1 text-2xl font-semibold">Zeengo Client</h1>
-      <p className="mb-6 text-sm text-[var(--ink-muted)]">Enter your booking code (ZN####)</p>
+      <p className="mb-6 text-sm text-[var(--ink-muted)]">Enter your booking code (ZN####) and the phone on the booking</p>
       <form className="space-y-3" onSubmit={onSubmit}>
         <div>
           <Label>Booking code</Label>
@@ -99,8 +100,18 @@ function ClientLoginPage() {
             autoCapitalize="characters"
           />
         </div>
+        <div>
+          <Label>Phone</Label>
+          <Input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+971 50 123 4567"
+            type="tel"
+            autoComplete="tel"
+          />
+        </div>
         {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
-        <Button type="submit" disabled={!znCode.trim() || loading} className="w-full">
+        <Button type="submit" disabled={!znCode.trim() || phone.replace(/\D/g, '').length < 7 || loading} className="w-full">
           Open trip
         </Button>
       </form>
