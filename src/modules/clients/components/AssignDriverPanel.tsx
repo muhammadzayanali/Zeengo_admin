@@ -59,7 +59,10 @@ export function AssignDriverPanel({ booking, onClose }: Props) {
         startDate,
         endDate: booking.departureDate || undefined,
       });
-      push({ tone: 'success', title: 'Driver assigned' });
+      push({
+        tone: 'success',
+        title: 'Assignment sent — awaiting driver confirmation',
+      });
       await qc.invalidateQueries({ queryKey: ['bookings', booking.id] });
       await qc.invalidateQueries({ queryKey: ['bookings'] });
       await qc.invalidateQueries({ queryKey: ['operations', 'booking', booking.id] });
@@ -79,6 +82,10 @@ export function AssignDriverPanel({ booking, onClose }: Props) {
       <h3 className="mb-3 text-sm font-semibold text-[var(--ink)]">
         Assign Driver — {booking.client?.fullName ?? booking.znCode}
       </h3>
+      <p className="mb-3 text-xs text-[var(--ink-muted)]">
+        Sends a pending assignment. The driver must accept before the guest sees
+        a confirmed driver and Driver chat unlocks.
+      </p>
       <Select value={driverId} onChange={(e) => setDriverId(e.target.value)}>
         <option value="">— Remove driver —</option>
         {(driversQuery.data?.data ?? []).map((d) => (

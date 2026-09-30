@@ -89,19 +89,20 @@ export function ClientEditForm({ booking, onCancel, onSaved }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-2">
-      <section className="rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)] sm:p-5">
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-          Contact
-        </h3>
-        <div className="space-y-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <div className="grid gap-5 md:grid-cols-2">
+        <section className="min-w-0 space-y-3">
+          <h3 className="text-[11px] font-semibold tracking-[0.12em] text-[var(--ink-muted)] uppercase">
+            Contact
+          </h3>
           <div>
-            <Label htmlFor="edit-fullName">Full Name</Label>
+            <Label htmlFor="edit-fullName">Full name</Label>
             <Input
               id="edit-fullName"
               name="fullName"
               defaultValue={booking.client?.fullName ?? ''}
               required
+              autoComplete="name"
             />
           </div>
           <div>
@@ -111,6 +112,7 @@ export function ClientEditForm({ booking, onCancel, onSaved }: Props) {
               name="phone"
               defaultValue={booking.client?.phone ?? ''}
               required
+              autoComplete="tel"
             />
           </div>
           <div>
@@ -120,51 +122,53 @@ export function ClientEditForm({ booking, onCancel, onSaved }: Props) {
               name="email"
               type="email"
               defaultValue={booking.client?.email ?? ''}
+              autoComplete="email"
             />
           </div>
-          <div>
-            <Label htmlFor="edit-nationality">Nationality</Label>
-            <Input
-              id="edit-nationality"
-              name="nationality"
-              defaultValue={booking.client?.nationality ?? ''}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <Label htmlFor="edit-nationality">Nationality</Label>
+              <Input
+                id="edit-nationality"
+                name="nationality"
+                defaultValue={booking.client?.nationality ?? ''}
+              />
+            </div>
+            <div className="min-w-0">
+              <Label htmlFor="edit-partySize">Party size</Label>
+              <Input
+                id="edit-partySize"
+                name="partySize"
+                type="number"
+                min={1}
+                defaultValue={booking.partySize}
+              />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="edit-partySize">Party Size</Label>
-            <Input
-              id="edit-partySize"
-              name="partySize"
-              type="number"
-              min={1}
-              defaultValue={booking.partySize}
-              className="max-w-[120px]"
-            />
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="rounded-2xl border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)] sm:p-5">
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-          Trip Details
-        </h3>
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
+        <section className="min-w-0 space-y-3">
+          <h3 className="text-[11px] font-semibold tracking-[0.12em] text-[var(--ink-muted)] uppercase">
+            Trip details
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
               <Label htmlFor="edit-tripStart">Arrival</Label>
               <Input
                 id="edit-tripStart"
                 name="tripStart"
                 type="date"
+                className="w-full min-w-0"
                 defaultValue={booking.arrivalDate ?? ''}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="edit-tripEnd">Departure</Label>
               <Input
                 id="edit-tripEnd"
                 name="tripEnd"
                 type="date"
+                className="w-full min-w-0"
                 defaultValue={booking.departureDate ?? ''}
               />
             </div>
@@ -184,13 +188,30 @@ export function ClientEditForm({ booking, onCancel, onSaved }: Props) {
               ))}
             </Select>
           </div>
-          <div>
-            <Label htmlFor="edit-status">Status</Label>
-            <Select id="edit-status" name="status" defaultValue={booking.status}>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </Select>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                id="edit-status"
+                name="status"
+                defaultValue={booking.status}
+              >
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </Select>
+            </div>
+            <div className="min-w-0">
+              <Label htmlFor="edit-totalAmount">Total ($)</Label>
+              <Input
+                id="edit-totalAmount"
+                type="number"
+                min={0}
+                step="0.01"
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+              />
+            </div>
           </div>
           <div>
             <Label htmlFor="edit-driverId">Driver</Label>
@@ -207,26 +228,15 @@ export function ClientEditForm({ booking, onCancel, onSaved }: Props) {
               ))}
             </Select>
           </div>
-          <div>
-            <Label htmlFor="edit-totalAmount">Total ($)</Label>
-            <Input
-              id="edit-totalAmount"
-              type="number"
-              min={0}
-              step="0.01"
-              value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
-            />
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <div className="flex flex-wrap gap-2 lg:col-span-2">
-        <Button type="submit" loading={loading}>
-          Save
-        </Button>
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] pt-4">
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
+        </Button>
+        <Button type="submit" loading={loading}>
+          Save changes
         </Button>
       </div>
     </form>

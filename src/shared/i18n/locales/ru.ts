@@ -710,6 +710,12 @@ const ru = {
     clientThread: 'Чат с клиентом',
     realtime: 'Онлайн · WebSocket',
     typing: 'Кто-то печатает…',
+    laneSupport: 'Поддержка',
+    laneDriver: 'Водитель',
+    laneSplizer: 'Сплайзер',
+    yourLane: 'Ваш канал',
+    allLanes: 'Все каналы',
+    clientInbox: 'Входящие гостей',
   },
 
   notificationsPage: {

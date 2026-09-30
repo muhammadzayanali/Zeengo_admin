@@ -44,11 +44,15 @@ export const chatApi = {
       signal,
     );
   },
-  sendMessage(conversationId: string, body: string) {
+  sendMessage(
+    conversationId: string,
+    body: string,
+    opts?: { senderRole?: 'admin' | 'driver' | 'splizer' },
+  ) {
     return apiRequest<ChatMessage>({
       method: 'POST',
       url: `/chat/conversations/${conversationId}/messages`,
-      data: { body },
+      data: { body, ...(opts?.senderRole ? { senderRole: opts.senderRole } : {}) },
     });
   },
   markRead(conversationId: string, lastMessageId: string) {

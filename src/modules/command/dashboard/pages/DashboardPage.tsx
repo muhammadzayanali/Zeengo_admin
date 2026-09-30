@@ -170,7 +170,10 @@ export function DashboardPage() {
         driverId: driverProfileId,
         startDate,
       });
-      push({ tone: 'success', title: 'Driver assigned' });
+      push({
+        tone: 'success',
+        title: 'Assignment sent — awaiting driver confirmation',
+      });
       closeAssignModal();
       await qc.invalidateQueries({ queryKey: ['dashboard'] });
     } catch (err) {
@@ -269,6 +272,15 @@ export function DashboardPage() {
           value={formatMoney(k.revenueToday)}
           tone="success"
           icon={<Wallet className="h-4 w-4" />}
+          hint={
+            (k.revenueTotal ?? 0) > 0
+              ? `Total collected ${formatMoney(k.revenueTotal ?? 0)}${
+                  (k.cashTotal ?? 0) > 0
+                    ? ` · cash ${formatMoney(k.cashTotal ?? 0)}`
+                    : ''
+                }`
+              : 'Open Finance for ledger'
+          }
           onClick={() => navigate('/finance')}
         />
         <StatsCard
@@ -286,9 +298,10 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-5">
+      <div className="grid gap-4 xl:grid-cols-5 xl:items-stretch">
         <AnalyticsCard
-          className="xl:col-span-3"
+          className="max-h-[min(28rem,65vh)] xl:col-span-3 xl:max-h-[min(36rem,70vh)]"
+          scrollBody
           title="Urgent alerts"
           description="SOS signals and edit requests first"
           action={
@@ -358,9 +371,14 @@ export function DashboardPage() {
         </AnalyticsCard>
 
         <AnalyticsCard
-          className="xl:col-span-2"
+          className="max-h-[min(28rem,65vh)] xl:col-span-2 xl:max-h-[min(36rem,70vh)]"
+          scrollBody
           title="Driver board"
-          description="Live operational status"
+          description={
+            drivers.length
+              ? `${drivers.length} drivers · scroll for full roster`
+              : 'Live operational status'
+          }
           action={
             <Link to="/drivers" className="text-xs font-medium text-[var(--accent)]">
               Roster

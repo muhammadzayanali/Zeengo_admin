@@ -125,50 +125,68 @@ export function NotificationsPage() {
             {notificationsQuery.data.data.map((notification) => {
               const unread = !notification.isRead;
               return (
-              <Card
-                key={notification.id}
-                className={
-                  unread
-                    ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)]/40'
-                    : undefined
-                }
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span
-                      className={
-                        unread
-                          ? 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--danger)] ring-4 ring-[var(--danger)]/15'
-                          : 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-transparent'
-                      }
-                      aria-hidden={!unread}
-                      aria-label={unread ? t('notificationsPage.unread') : undefined}
-                      title={unread ? t('notificationsPage.unread') : undefined}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className={unread ? 'font-semibold' : 'font-medium text-[var(--ink-muted)]'}>
-                          {notification.title}
-                        </p>
-                        {unread ? (
-                          <StatusBadge tone="accent">{t('notificationsPage.new')}</StatusBadge>
+                <Card
+                  key={notification.id}
+                  className={
+                    unread
+                      ? 'border-[var(--accent)]/40 bg-[var(--accent-soft)]/40'
+                      : undefined
+                  }
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <span
+                        className={
+                          unread
+                            ? 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--danger)] ring-4 ring-[var(--danger)]/15'
+                            : 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-transparent'
+                        }
+                        aria-hidden={!unread}
+                        aria-label={
+                          unread ? t('notificationsPage.unread') : undefined
+                        }
+                        title={
+                          unread ? t('notificationsPage.unread') : undefined
+                        }
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p
+                            className={
+                              unread
+                                ? 'font-semibold text-[var(--ink)]'
+                                : 'font-medium text-[var(--ink-muted)]'
+                            }
+                          >
+                            {notification.title}
+                          </p>
+                          {unread ? (
+                            <StatusBadge tone="accent">
+                              {t('notificationsPage.new')}
+                            </StatusBadge>
+                          ) : null}
+                        </div>
+                        {notification.body ? (
+                          <p className="mt-1 break-words text-sm leading-snug text-[var(--ink-muted)] [overflow-wrap:anywhere]">
+                            {notification.body}
+                          </p>
                         ) : null}
+                        <p className="mt-1.5 text-xs text-[var(--ink-muted)]">
+                          {formatDate(notification.createdAt)}
+                        </p>
                       </div>
-                      {notification.body ? (
-                        <p className="mt-1 text-sm text-[var(--ink-muted)]">{notification.body}</p>
-                      ) : null}
-                      <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                        {formatDate(notification.createdAt)}
-                      </p>
                     </div>
+                    {unread ? (
+                      <Button
+                        variant="secondary"
+                        className="!h-9 w-full shrink-0 whitespace-nowrap sm:w-auto"
+                        onClick={() => handleMarkRead(notification.id)}
+                      >
+                        {t('notificationsPage.markRead')}
+                      </Button>
+                    ) : null}
                   </div>
-                  {unread ? (
-                    <Button variant="secondary" onClick={() => handleMarkRead(notification.id)}>
-                      {t('notificationsPage.markRead')}
-                    </Button>
-                  ) : null}
-                </div>
-              </Card>
+                </Card>
               );
             })}
           </div>

@@ -7,21 +7,32 @@ export function AnalyticsCard({
   action,
   children,
   className,
+  bodyClassName,
+  scrollBody,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  bodyClassName?: string;
+  /** Keep header fixed and scroll the body when the card has a max-height. */
+  scrollBody?: boolean;
 }) {
   return (
     <section
       className={cn(
         'rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]',
+        scrollBody && 'flex min-h-0 flex-col',
         className,
       )}
     >
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div
+        className={cn(
+          'mb-4 flex items-start justify-between gap-3',
+          scrollBody && 'shrink-0',
+        )}
+      >
         <div>
           <h3 className="text-sm font-semibold text-[var(--ink)]">{title}</h3>
           {description ? (
@@ -30,7 +41,15 @@ export function AnalyticsCard({
         </div>
         {action}
       </div>
-      {children}
+      <div
+        className={cn(
+          scrollBody &&
+            'min-h-0 flex-1 overflow-y-auto overscroll-contain pe-3 [scrollbar-gutter:stable] [scrollbar-width:thin]',
+          bodyClassName,
+        )}
+      >
+        {children}
+      </div>
     </section>
   );
 }

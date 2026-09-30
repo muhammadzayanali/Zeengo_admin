@@ -260,6 +260,8 @@ export function BookingDetailPage() {
   const [payMethod, setPayMethod] = useState<CashMethod>('cash');
   const [payNotes, setPayNotes] = useState('');
   const [guideStaffId, setGuideStaffId] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectOpen, setRejectOpen] = useState(false);
 
   const booking = useQuery({
     queryKey: ['bookings', id],
@@ -294,6 +296,32 @@ export function BookingDetailPage() {
       qc.invalidateQueries({ queryKey: ['operations'] }),
     ]);
   };
+
+  const reviewRequest = useMutation({
+    mutationFn: (data: {
+      requestStatus: 'under_review' | 'confirmed' | 'rejected';
+      rejectionReason?: string;
+    }) => bookingsApi.reviewRequest(id, data),
+    onSuccess: async (row) => {
+      setRejectOpen(false);
+      setRejectReason('');
+      push({
+        tone: 'success',
+        title:
+          row.requestStatus === 'confirmed'
+            ? 'Customer request confirmed'
+            : row.requestStatus === 'rejected'
+              ? 'Customer request rejected'
+              : 'Marked under review',
+      });
+      await invalidateAll();
+    },
+    onError: (e) =>
+      push({
+        tone: 'error',
+        title: e instanceof ApiClientError ? e.message : t('somethingWrong'),
+      }),
+  });
 
   const addItem = useMutation({
     mutationFn: () =>
@@ -523,12 +551,104 @@ export function BookingDetailPage() {
             {b.status}
           </Badge>
           {b.isVip || d?.isVip ? <Badge tone="accent">VIP</Badge> : null}
+          {b.source && b.source !== 'staff' ? (
+            <Badge tone="accent">
+              {b.source === 'customer_app' ? 'Customer App' : 'Customer Website'}
+            </Badge>
+          ) : null}
+          {b.requestStatus && b.source && b.source !== 'staff' ? (
+            <Badge
+              tone={
+                b.requestStatus === 'confirmed'
+                  ? 'success'
+                  : b.requestStatus === 'rejected'
+                    ? 'danger'
+                    : b.requestStatus === 'under_review'
+                      ? 'accent'
+                      : 'warning'
+              }
+            >
+              Request · {b.requestStatus.replace(/_/g, ' ')}
+            </Badge>
+          ) : null}
           <Link to="/bookings">
             <Button variant="secondary">{t('back')}</Button>
           </Link>
         </div>
       }
     >
+      {b.source &&
+      b.source !== 'staff' &&
+      b.requestStatus &&
+      b.requestStatus !== 'confirmed' ? (
+        <Card className="mb-4 border-[var(--accent)]/30 bg-[var(--bg-muted)]/40">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1 text-sm">
+              <p className="font-semibold">Customer booking request</p>
+              <p className="text-[var(--ink-muted)]">
+                Source:{' '}
+                {b.source === 'customer_app'
+                  ? 'Customer App'
+                  : 'Customer Website'}{' '}
+                · Status: {b.requestStatus.replace(/_/g, ' ')}
+              </p>
+              {b.customerNotes ? (
+                <p className="text-xs">
+                  <span className="font-medium">Customer notes · </span>
+                  {b.customerNotes}
+                </p>
+              ) : null}
+              {b.rejectionReason ? (
+                <p className="text-xs text-[var(--danger)]">
+                  Rejection · {b.rejectionReason}
+                </p>
+              ) : null}
+              <p className="text-xs text-[var(--ink-muted)]">
+                {b.client?.fullName} · {b.client?.phone}
+                {b.client?.email ? ` · ${b.client.email}` : ''} · PAX{' '}
+                {b.partySize}
+                {(b.childrenCount ?? 0) > 0
+                  ? ` · Children ${b.childrenCount}`
+                  : ''}
+              </p>
+            </div>
+            {canWrite && b.requestStatus !== 'rejected' ? (
+              <div className="flex flex-wrap gap-1.5">
+                {b.requestStatus === 'pending' ? (
+                  <Button
+                    className="!h-8 !px-2.5 !text-xs"
+                    variant="secondary"
+                    disabled={reviewRequest.isPending}
+                    onClick={() =>
+                      reviewRequest.mutate({ requestStatus: 'under_review' })
+                    }
+                  >
+                    Mark under review
+                  </Button>
+                ) : null}
+                <Button
+                  className="!h-8 !px-2.5 !text-xs"
+                  disabled={reviewRequest.isPending}
+                  onClick={() =>
+                    reviewRequest.mutate({ requestStatus: 'confirmed' })
+                  }
+                >
+                  Confirm request
+                </Button>
+                <Button
+                  className="!h-8 !px-2.5 !text-xs"
+                  variant="secondary"
+                  disabled={reviewRequest.isPending}
+                  onClick={() => setRejectOpen(true)}
+                >
+                  Reject
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </Card>
+      ) : null}
+
       <Card className="mb-4">
         <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
           <span>
@@ -629,6 +749,24 @@ export function BookingDetailPage() {
                   <dt className="text-[var(--ink-muted)]">Status</dt>
                   <dd>{d.status}</dd>
                 </div>
+                {b.source ? (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-[var(--ink-muted)]">Source</dt>
+                    <dd>
+                      {b.source === 'customer_web'
+                        ? 'Customer Website'
+                        : b.source === 'customer_app'
+                          ? 'Customer App'
+                          : 'Staff'}
+                    </dd>
+                  </div>
+                ) : null}
+                {b.requestStatus ? (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-[var(--ink-muted)]">Request</dt>
+                    <dd>{b.requestStatus.replace(/_/g, ' ')}</dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between gap-2">
                   <dt className="text-[var(--ink-muted)]">Package</dt>
                   <dd>{d.packageName ?? '—'}</dd>
@@ -1028,13 +1166,33 @@ export function BookingDetailPage() {
                 <div className="flex justify-between gap-2">
                   <dt className="text-[var(--ink-muted)]">Status</dt>
                   <dd>
-                    <Badge>
-                      {d?.assignmentStatus ??
+                    <Badge
+                      tone={
+                        (d?.assignmentStatus ??
+                          b.activeDriverAssignment?.status) === 'pending'
+                          ? 'warning'
+                          : (d?.assignmentStatus ??
+                                b.activeDriverAssignment?.status) ===
+                              'in_progress'
+                            ? 'success'
+                            : 'default'
+                      }
+                    >
+                      {(
+                        d?.assignmentStatus ??
                         b.activeDriverAssignment?.status ??
-                        '—'}
+                        '—'
+                      ).replace(/_/g, ' ')}
                     </Badge>
                   </dd>
                 </div>
+                {(d?.assignmentStatus ?? b.activeDriverAssignment?.status) ===
+                'pending' ? (
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    Waiting for the driver to accept before the trip is
+                    confirmed for the guest.
+                  </p>
+                ) : null}
                 <div className="flex justify-between gap-2">
                   <dt className="text-[var(--ink-muted)]">Dates</dt>
                   <dd>
@@ -1290,7 +1448,12 @@ export function BookingDetailPage() {
       ) : null}
 
       {panel === 'edit' && b ? (
-        <DialogShell open title="Edit Booking / Client" onClose={() => setPanel(null)}>
+        <DialogShell
+          open
+          wide
+          title="Edit Booking / Client"
+          onClose={() => setPanel(null)}
+        >
           <ClientEditForm
             booking={b}
             onCancel={() => setPanel(null)}
@@ -1430,6 +1593,43 @@ export function BookingDetailPage() {
           </div>
         </DialogShell>
       ) : null}
+
+      <DialogShell
+        open={rejectOpen}
+        title="Reject customer request"
+        onClose={() => setRejectOpen(false)}
+      >
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="rejectReason">Rejection reason</Label>
+            <Textarea
+              id="rejectReason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              placeholder="Explain why this request cannot be confirmed"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setRejectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                reviewRequest.isPending || rejectReason.trim().length < 3
+              }
+              onClick={() =>
+                reviewRequest.mutate({
+                  requestStatus: 'rejected',
+                  rejectionReason: rejectReason.trim(),
+                })
+              }
+            >
+              Reject request
+            </Button>
+          </div>
+        </div>
+      </DialogShell>
     </PageScaffold>
   );
 }

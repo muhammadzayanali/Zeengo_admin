@@ -56,7 +56,7 @@ export function DialogShell({
         aria-labelledby={titleId}
         className={cn(
           'relative max-h-[90vh] w-full overflow-auto rounded-3xl border border-[var(--line)] bg-[var(--bg-elevated)] p-5 shadow-[var(--shadow)]',
-          wide ? 'max-w-3xl' : 'max-w-lg',
+          wide ? 'max-w-4xl' : 'max-w-lg',
         )}
       >
         <div className="mb-4 flex items-center justify-between gap-3">
