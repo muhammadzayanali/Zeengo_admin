@@ -21,7 +21,30 @@ export interface CreateVendorInput {
   notes?: string;
 }
 
-export interface UpdateVendorInput extends Partial<CreateVendorInput> {
+export interface VendorListingInput {
+  nameEn?: string | null;
+  nameAr?: string | null;
+  nameRu?: string | null;
+  summary?: string | null;
+  summaryAr?: string | null;
+  address?: string | null;
+  area?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  stars?: number | null;
+  images?: string[];
+  priceFrom?: number | null;
+  priceCurrency?: string;
+  priceUnit?: 'night' | 'person' | 'hour' | 'trip' | null;
+  category?: string | null;
+  durationLabel?: string | null;
+  languages?: string | null;
+  website?: string | null;
+  yandexMapsUrl?: string | null;
+  isPublished?: boolean;
+}
+
+export interface UpdateVendorInput extends Partial<CreateVendorInput>, VendorListingInput {
   isActive?: boolean;
 }
 
@@ -52,6 +75,7 @@ export const vendorsApi = {
       type?: string;
       city?: string;
       isActive?: boolean;
+      isPublished?: boolean;
     },
     signal?: AbortSignal,
   ) {

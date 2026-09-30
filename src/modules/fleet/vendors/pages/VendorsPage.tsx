@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Mail, Phone, User } from 'lucide-react';
 import { vendorKeys, vendorsApi } from '../services/vendors.api';
+import { VendorListingDialog } from '../components/VendorListingDialog';
 import { bookingsApi } from '@/modules/clients/bookings/services/bookings.api';
 import {
   Button,
@@ -118,6 +119,7 @@ export function VendorsPage() {
   });
   const [assignVendor, setAssignVendor] = useState<Vendor | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [listingId, setListingId] = useState<string | null>(null);
   const [assignForm, setAssignForm] = useState({
     bookingId: '',
     serviceDate: '',
@@ -428,6 +430,7 @@ export function VendorsPage() {
               key={vendor.id}
               vendor={vendor}
               onEdit={() => openEdit(vendor)}
+              onListing={() => setListingId(vendor.id)}
               onAssign={() => {
                 setAssignVendor(vendor);
                 setAssignForm({
@@ -867,6 +870,8 @@ export function VendorsPage() {
           />
         )}
       </DialogShell>
+
+      <VendorListingDialog vendorId={listingId} onClose={() => setListingId(null)} />
     </PageScaffold>
   );
 }
@@ -874,11 +879,13 @@ export function VendorsPage() {
 function VendorCard({
   vendor,
   onEdit,
+  onListing,
   onAssign,
   onDetails,
 }: {
   vendor: Vendor;
   onEdit: () => void;
+  onListing: () => void;
   onAssign: () => void;
   onDetails: () => void;
 }) {
@@ -890,7 +897,10 @@ function VendorCard({
     <article className="flex flex-col rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold">{vendor.name}</h3>
+          <h3 className="flex flex-wrap items-center gap-1.5 font-semibold">
+            {vendor.name}
+            {vendor.isPublished === false ? <StatusBadge tone="warning">Hidden on website</StatusBadge> : null}
+          </h3>
           <p className="text-sm text-[var(--ink-muted)]">
             {TYPE_LABEL[type] ?? vendor.type}
             {vendor.city ? ` · ${vendor.city}` : ''}
@@ -928,6 +938,9 @@ function VendorCard({
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onEdit}>
             {t('edit')}
+          </Button>
+          <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onListing}>
+            Website
           </Button>
           <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onAssign}>
             + {t('vendors.assign')}

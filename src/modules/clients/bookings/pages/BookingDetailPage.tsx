@@ -16,6 +16,8 @@ import { NewTaskPanel } from '@/modules/clients/components/NewTaskPanel';
 import { ClientEditForm } from '@/modules/clients/components/ClientEditForm';
 import { BookingAttachVendorDialog } from '../components/BookingAttachVendorDialog';
 import { BookingChatPanel } from '../components/BookingChatPanel';
+import { CustomerRequestItems } from '../components/CustomerRequestItems';
+import { formatRequestMoney } from '../lib/requestMoney';
 import { vendorsApi } from '@/modules/fleet/vendors/services/vendors.api';
 import {
   Badge,
@@ -278,7 +280,10 @@ export function BookingDetailPage() {
   const itinerary = useQuery({
     queryKey: ['bookings', id, 'itinerary'],
     queryFn: ({ signal }) => itinerariesApi.forBooking(id, signal),
-    enabled: Boolean(id) && tab === 'program',
+    enabled:
+      Boolean(id) &&
+      (tab === 'program' ||
+        Boolean(booking.data?.source && booking.data.source !== 'staff')),
   });
 
   const staffUsers = useQuery({
@@ -646,6 +651,19 @@ export function BookingDetailPage() {
               </div>
             ) : null}
           </div>
+          <CustomerRequestItems
+            bookingId={id}
+            items={itineraryItems}
+            loading={itinerary.isLoading}
+            totalAmount={b.totalAmount}
+            canWrite={canWrite && b.requestStatus !== 'rejected'}
+            onSaved={invalidateAll}
+          />
+          {canWrite && b.requestStatus !== 'rejected' && !(Number(b.totalAmount) > 0) ? (
+            <p className="mt-2 text-xs text-[var(--warning)]">
+              Final total is not set — the customer sees 0 due until you save it.
+            </p>
+          ) : null}
         </Card>
       ) : null}
 
@@ -1004,6 +1022,18 @@ export function BookingDetailPage() {
                           <p className="text-[var(--ink-muted)]">
                             {item.startTime ?? ''} {item.locationName ?? ''}
                           </p>
+                          {item.customerRequest ? (
+                            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
+                              <Badge tone="accent">Customer request</Badge>
+                              {item.description ?? ''}
+                              {item.customerRequest.indicativePrice
+                                ? ` · indicative ${formatRequestMoney(
+                                    item.customerRequest.indicativePrice.amount,
+                                    item.customerRequest.indicativePrice.currency,
+                                  )}`
+                                : ''}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge>{item.status}</Badge>

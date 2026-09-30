@@ -31,12 +31,14 @@ export function clearTokens() {
 export class ApiClientError extends Error {
   status: number;
   code?: string;
+  details?: unknown;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, details?: unknown) {
     super(message);
     this.name = 'ApiClientError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -122,6 +124,7 @@ export async function apiRequest<T>(
         body?.error?.message || error.message || 'Request failed',
         error.response?.status ?? 500,
         body?.error?.code,
+        (body?.error as { details?: unknown } | undefined)?.details,
       );
     }
     throw error;
