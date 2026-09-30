@@ -7,6 +7,14 @@ export type StaffRole =
 
 export type BookingStatus = 'active' | 'completed' | 'cancelled';
 
+export type BookingRequestStatus =
+  | 'pending'
+  | 'under_review'
+  | 'confirmed'
+  | 'rejected';
+
+export type BookingSource = 'staff' | 'customer_web' | 'customer_app';
+
 export interface PageMeta {
   page: number;
   limit: number;
@@ -57,6 +65,8 @@ export interface DashboardSummary {
   urgentTasks: number;
   driversInField: number;
   revenueToday: number;
+  revenueTotal?: number;
+  cashTotal?: number;
   todaysItinerary: number;
   itineraryProgress?: number;
   unassignedClients: number;
@@ -113,13 +123,18 @@ export interface Booking {
   arrivalDate: string | null;
   departureDate: string | null;
   partySize: number;
+  childrenCount?: number;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
   status: BookingStatus;
+  requestStatus?: BookingRequestStatus;
+  source?: BookingSource;
+  customerNotes?: string | null;
+  rejectionReason?: string | null;
   isVip: boolean;
   internalNotes: string | null;
-  createdBy: string;
+  createdBy: string | null;
   createdAt: string;
   updatedAt: string;
   client?: {

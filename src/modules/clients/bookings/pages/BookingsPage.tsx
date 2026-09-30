@@ -23,7 +23,10 @@ import {
   type StatusTone,
 } from '@/shared/ui';
 import { ApiClientError } from '@/shared/api/client';
-import type { BookingStatus } from '@/shared/api/types';
+import type {
+  BookingRequestStatus,
+  BookingStatus,
+} from '@/shared/api/types';
 import { formatDate, formatMoney } from '@/shared/lib/cn';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 
@@ -32,6 +35,28 @@ const STATUS_TONE: Record<BookingStatus, StatusTone> = {
   completed: 'default',
   cancelled: 'danger',
 };
+
+const REQUEST_TONE: Record<BookingRequestStatus, StatusTone> = {
+  pending: 'warning',
+  under_review: 'accent',
+  confirmed: 'success',
+  rejected: 'danger',
+};
+
+type RequestFilter =
+  | ''
+  | 'customer'
+  | 'pending'
+  | 'under_review'
+  | 'confirmed'
+  | 'rejected';
+
+function sourceLabel(source?: string | null) {
+  if (source === 'customer_web') return 'Customer Website';
+  if (source === 'customer_app') return 'Customer App';
+  if (source === 'staff') return 'Staff';
+  return null;
+}
 
 export function BookingsPage() {
   const { t } = useTranslation();
@@ -42,6 +67,7 @@ export function BookingsPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
   const [status, setStatus] = useState<BookingStatus | ''>('');
+  const [requestFilter, setRequestFilter] = useState<RequestFilter>('');
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -52,7 +78,10 @@ export function BookingsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const bookingsQuery = useQuery({
-    queryKey: ['bookings', { page, search: debouncedSearch, status }],
+    queryKey: [
+      'bookings',
+      { page, search: debouncedSearch, status, requestFilter },
+    ],
     queryFn: ({ signal }) =>
       bookingsApi.list(
         {
@@ -60,6 +89,11 @@ export function BookingsPage() {
           limit: 15,
           search: debouncedSearch || undefined,
           status: status || undefined,
+          ...(requestFilter === 'customer'
+            ? { customerRequests: 'true' }
+            : requestFilter
+              ? { requestStatus: requestFilter, customerRequests: 'true' }
+              : {}),
         },
         signal,
       ),
@@ -241,6 +275,21 @@ export function BookingsPage() {
             <option value="completed">{t('common.completed')}</option>
             <option value="cancelled">{t('common.cancelled')}</option>
           </Select>
+          <Select
+            className="max-w-xs"
+            value={requestFilter}
+            onChange={(e) => {
+              setRequestFilter(e.target.value as RequestFilter);
+              setPage(1);
+            }}
+          >
+            <option value="">All sources</option>
+            <option value="customer">Customer Requests</option>
+            <option value="pending">Pending requests</option>
+            <option value="under_review">Under review</option>
+            <option value="confirmed">Confirmed requests</option>
+            <option value="rejected">Rejected requests</option>
+          </Select>
         </>
       }
     >
@@ -275,6 +324,7 @@ export function BookingsPage() {
                   <th className="px-4 py-3">{t('bookings.total')}</th>
                   <th className="px-4 py-3">{t('bookings.due')}</th>
                   <th className="px-4 py-3">{t('common.status')}</th>
+                  <th className="px-4 py-3">Request</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line)]">
@@ -290,6 +340,12 @@ export function BookingsPage() {
                       {booking.isVip ? (
                         <StatusBadge tone="accent"> VIP</StatusBadge>
                       ) : null}
+                      {sourceLabel(booking.source) &&
+                      booking.source !== 'staff' ? (
+                        <span className="mt-0.5 block text-[11px] text-[var(--ink-muted)]">
+                          {sourceLabel(booking.source)}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-[var(--ink-muted)]">
                       {formatDate(booking.arrivalDate)} –{' '}
@@ -301,6 +357,23 @@ export function BookingsPage() {
                       <StatusBadge tone={STATUS_TONE[booking.status]}>
                         {booking.status}
                       </StatusBadge>
+                    </td>
+                    <td className="px-4 py-3">
+                      {booking.requestStatus &&
+                      booking.source &&
+                      booking.source !== 'staff' ? (
+                        <StatusBadge
+                          tone={
+                            REQUEST_TONE[
+                              booking.requestStatus as BookingRequestStatus
+                            ] ?? 'default'
+                          }
+                        >
+                          {booking.requestStatus.replace(/_/g, ' ')}
+                        </StatusBadge>
+                      ) : (
+                        <span className="text-[var(--ink-muted)]">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

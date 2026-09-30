@@ -23,6 +23,20 @@ export const bookingsApi = {
   update(id: string, data: Record<string, unknown>) {
     return apiRequest<Booking>({ method: 'PATCH', url: `/bookings/${id}`, data });
   },
+  reviewRequest(
+    id: string,
+    data: {
+      requestStatus: 'under_review' | 'confirmed' | 'rejected';
+      rejectionReason?: string;
+      reviewNotes?: string;
+    },
+  ) {
+    return apiRequest<Booking>({
+      method: 'POST',
+      url: `/bookings/${id}/request-review`,
+      data,
+    });
+  },
   checklist(id: string, signal?: AbortSignal) {
     return apiRequest<ChecklistItem[]>({ url: `/bookings/${id}/checklist` }, signal);
   },

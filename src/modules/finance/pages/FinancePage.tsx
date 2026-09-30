@@ -95,7 +95,7 @@ function RevenueChart({
 
 export function FinancePage() {
   const { t, i18n } = useTranslation();
-  const [range, setRange] = useState<ChartRange>('7d');
+  const [range, setRange] = useState<ChartRange>('year');
   const [status, setStatus] = useState('');
   const [method, setMethod] = useState('');
   const [page, setPage] = useState(1);
@@ -215,6 +215,24 @@ export function FinancePage() {
                   seriesQuery.data.points.reduce((sum, p) => sum + p.total, 0),
                 ),
               })}
+              {seriesQuery.data.points.every((p) => p.total === 0) &&
+              (summary?.allTime?.cash.amount ?? 0) +
+                (summary?.allTime?.stripe.amount ?? 0) >
+                0 ? (
+                <span className="mt-1 block text-[var(--warning)]">
+                  No paid revenue in this range. Switch to{' '}
+                  <button
+                    type="button"
+                    className="font-semibold underline"
+                    onClick={() => setRange('year')}
+                  >
+                    This year
+                  </button>{' '}
+                  to include older cash (e.g.{' '}
+                  {formatMoney(summary?.allTime?.cash.amount ?? 0)} cash
+                  all-time).
+                </span>
+              ) : null}
             </p>
           </>
         )}
