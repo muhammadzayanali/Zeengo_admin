@@ -16,9 +16,14 @@ import {
   useToast,
 } from '@/shared/ui';
 import { ApiClientError } from '@/shared/api/client';
-import type { Conversation } from '@/shared/api/types';
+import type { ChatMessage, Conversation } from '@/shared/api/types';
 
 type Filter = 'all' | 'team' | 'clients';
+
+function parseFilter(raw: string | null): Filter | null {
+  if (raw === 'team' || raw === 'clients' || raw === 'all') return raw;
+  return null;
+}
 
 function elapsedLabel(iso: string | null) {
   if (!iso) return '';
@@ -37,6 +42,12 @@ function conversationLabel(ch: Conversation) {
   return ch.type;
 }
 
+function laneKey(role: ChatMessage['senderRole']): 'laneSupport' | 'laneDriver' | 'laneSplizer' {
+  if (role === 'driver') return 'laneDriver';
+  if (role === 'splizer') return 'laneSplizer';
+  return 'laneSupport';
+}
+
 export function ChatPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -46,7 +57,8 @@ export function ChatPage() {
   const [conversationId, setConversationId] = useState(
     searchParams.get('conversationId') ?? '',
   );
-  const [filter, setFilter] = useState<Filter>('all');
+  const initialFilter = parseFilter(searchParams.get('filter')) ?? 'all';
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   const [text, setText] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [typingLabel, setTypingLabel] = useState<string | null>(null);
@@ -56,9 +68,30 @@ export function ChatPage() {
   const bookingParam = searchParams.get('bookingId');
   const openedBookingRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    const fromUrl = parseFilter(searchParams.get('filter'));
+    if (fromUrl && fromUrl !== filter) setFilter(fromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  function applyFilter(next: Filter) {
+    setFilter(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === 'all') params.delete('filter');
+    else params.set('filter', next);
+    setSearchParams(params);
+  }
+
   const conversationsQuery = useQuery({
     queryKey: chatKeys.conversations(),
     queryFn: ({ signal }) => chatApi.conversations(signal),
+    staleTime: 8_000,
+  });
+
+  const clientThreadsQuery = useQuery({
+    queryKey: chatKeys.clientThreads(),
+    queryFn: ({ signal }) => chatApi.clientThreads(signal),
+    enabled: filter === 'clients',
     staleTime: 8_000,
   });
 
@@ -71,6 +104,7 @@ export function ChatPage() {
       if (row.bookingId) next.set('bookingId', row.bookingId);
       setSearchParams(next);
       await qc.invalidateQueries({ queryKey: chatKeys.conversations() });
+      await qc.invalidateQueries({ queryKey: chatKeys.clientThreads() });
     },
     onError: (err) => {
       openedBookingRef.current = null;
@@ -99,6 +133,13 @@ export function ChatPage() {
   }, [bookingParam, conversationsQuery.data, conversationsQuery.isLoading]);
 
   const conversations = useMemo(() => {
+    if (filter === 'clients' && (clientThreadsQuery.data?.length ?? 0) > 0) {
+      return [...clientThreadsQuery.data!].sort((a, b) => {
+        const aAt = a.lastMessageAt ?? a.createdAt;
+        const bAt = b.lastMessageAt ?? b.createdAt;
+        return new Date(bAt).getTime() - new Date(aAt).getTime();
+      });
+    }
     const rows = conversationsQuery.data ?? [];
     const filtered =
       filter === 'team'
@@ -113,7 +154,7 @@ export function ChatPage() {
       const bAt = b.lastMessageAt ?? b.createdAt;
       return new Date(bAt).getTime() - new Date(aAt).getTime();
     });
-  }, [conversationsQuery.data, filter]);
+  }, [conversationsQuery.data, clientThreadsQuery.data, filter]);
 
   useEffect(() => {
     if (conversationId) return;
@@ -135,6 +176,10 @@ export function ChatPage() {
       if (!prev) return prev;
       return prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c));
     });
+    qc.setQueryData(chatKeys.clientThreads(), (prev: typeof clientThreadsQuery.data) => {
+      if (!prev) return prev;
+      return prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c));
+    });
   }
 
   async function markConversationRead(id: string, lastMessageId: string) {
@@ -148,7 +193,6 @@ export function ChatPage() {
     }
   }
 
-  // Join room when conversation changes
   useEffect(() => {
     if (!conversationId) {
       setActiveChatConversationId(null);
@@ -166,7 +210,6 @@ export function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  // Mark latest real message as read whenever the open inbox updates
   useEffect(() => {
     if (!conversationId || !messages.length) return;
     const lastReal = [...messages].reverse().find((m) => !m.id.startsWith('temp-'));
@@ -177,7 +220,6 @@ export function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, messages]);
 
-  // If a new message arrives while this inbox is open, keep badge at 0
   useEffect(() => {
     const socket = getOpsSocket();
     if (!socket || !conversationId) return;
@@ -195,7 +237,6 @@ export function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  // Typing indicator from peers
   useEffect(() => {
     const socket = getOpsSocket();
     if (!socket) return;
@@ -231,6 +272,7 @@ export function ChatPage() {
         body,
         createdAt: new Date().toISOString(),
         senderType: 'staff' as const,
+        senderRole: undefined as ChatMessage['senderRole'],
         senderStaffId: user?.id ?? null,
         senderClientId: null,
         senderName: null,
@@ -257,7 +299,6 @@ export function ChatPage() {
         const withoutTemp = prev.filter((m) => m.id !== tempId && m.id !== msg.id);
         return [...withoutTemp, msg];
       });
-      // Background only — don't block the UI / don't refetch unread for open thread
       void chatApi.markRead(conversationId, msg.id).catch(() => undefined);
       clearUnreadBadge(conversationId);
     },
@@ -307,12 +348,17 @@ export function ChatPage() {
   const active = conversations.find((c) => c.id === conversationId)
     ?? (conversationsQuery.data ?? []).find((c) => c.id === conversationId);
 
+  const isClientThread =
+    active?.type === 'booking_support' || active?.type === 'client_direct';
+
   function selectConversation(id: string) {
     clearUnreadBadge(id);
     setConversationId(id);
     const next = new URLSearchParams(searchParams);
     next.set('conversationId', id);
-    const row = (conversationsQuery.data ?? []).find((c) => c.id === id);
+    const row =
+      (conversationsQuery.data ?? []).find((c) => c.id === id) ??
+      (clientThreadsQuery.data ?? []).find((c) => c.id === id);
     if (row?.bookingId) next.set('bookingId', row.bookingId);
     else next.delete('bookingId');
     setSearchParams(next);
@@ -340,7 +386,7 @@ export function ChatPage() {
           <button
             key={id}
             type="button"
-            onClick={() => setFilter(id)}
+            onClick={() => applyFilter(id)}
             className={
               filter === id
                 ? 'rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-medium text-[var(--accent)]'
@@ -371,7 +417,9 @@ export function ChatPage() {
               {t('add')}
             </Button>
           </form>
-          {conversationsQuery.isLoading || openBookingThread.isPending ? (
+          {conversationsQuery.isLoading ||
+          openBookingThread.isPending ||
+          (filter === 'clients' && clientThreadsQuery.isLoading) ? (
             <Skeleton className="h-40 w-full" />
           ) : conversationsQuery.isError ? (
             <ErrorState
@@ -380,21 +428,21 @@ export function ChatPage() {
             />
           ) : conversations.length === 0 ? (
             <p className="px-2 py-6 text-center text-xs text-[var(--ink-muted)]">
-              {t('chat.noChats')}
+              {filter === 'clients' ? t('chat.clientInbox') : t('chat.noChats')}
             </p>
           ) : (
             <div className="min-h-0 flex-1 overflow-y-auto">
               {conversations.map((ch) => (
-            <button
-              key={ch.id}
-              type="button"
+                <button
+                  key={ch.id}
+                  type="button"
                   onClick={() => selectConversation(ch.id)}
-              className={
+                  className={
                     conversationId === ch.id
-                  ? 'mb-1 w-full rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-start text-sm font-medium text-[var(--accent)]'
-                  : 'mb-1 w-full rounded-lg px-3 py-2 text-start text-sm text-[var(--ink-muted)] hover:bg-[var(--bg-muted)]'
-              }
-            >
+                      ? 'mb-1 w-full rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-start text-sm font-medium text-[var(--accent)]'
+                      : 'mb-1 w-full rounded-lg px-3 py-2 text-start text-sm text-[var(--ink-muted)] hover:bg-[var(--bg-muted)]'
+                  }
+                >
                   <span className="flex items-center justify-between gap-2">
                     <span className="truncate">{conversationLabel(ch)}</span>
                     {ch.unreadCount > 0 ? (
@@ -407,8 +455,8 @@ export function ChatPage() {
                       : ch.type}
                     {ch.lastMessageAt ? ` · ${elapsedLabel(ch.lastMessageAt)}` : ''}
                   </span>
-            </button>
-          ))}
+                </button>
+              ))}
             </div>
           )}
         </aside>
@@ -417,13 +465,18 @@ export function ChatPage() {
           <div className="border-b border-[var(--line)] px-4 py-3">
             <div className="text-sm font-semibold">
               {active ? conversationLabel(active) : t('chat.select')}
-          </div>
+            </div>
             {active?.znCode ? (
               <div className="text-xs text-[var(--ink-muted)]">
                 {active.znCode}
                 {active.clientName ? ` · ${active.clientName}` : ''}
                 {' · '}
                 {t('chat.realtime')}
+                {isClientThread
+                  ? user?.role === 'admin' || user?.role === 'ops_manager'
+                    ? ` · ${t('chat.allLanes')}`
+                    : ` · ${t('chat.yourLane')}`
+                  : ''}
               </div>
             ) : active ? (
               <div className="text-xs text-[var(--ink-muted)]">{t('chat.realtime')}</div>
@@ -463,11 +516,16 @@ export function ChatPage() {
                       }
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">
+                        <span className="flex flex-wrap items-center gap-1.5 font-medium">
                           {mine
                             ? t('chat.you')
                             : m.senderName ??
                               (m.senderType === 'client' ? t('chat.client') : t('chat.staff'))}
+                          {isClientThread || m.senderRole ? (
+                            <span className="rounded-full bg-[var(--bg-elevated)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)] ring-1 ring-[var(--line)]">
+                              {t(`chat.${laneKey(m.senderRole)}`)}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="text-[11px] text-[var(--ink-muted)]">
                           {elapsedLabel(m.createdAt)}

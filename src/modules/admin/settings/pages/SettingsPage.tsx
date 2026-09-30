@@ -14,7 +14,7 @@ import {
   useToast,
 } from '@/shared/ui';
 import { ApiClientError } from '@/shared/api/client';
-import { ROLE_NAV_PATHS, ROLE_PERMISSIONS } from '@/modules/auth/permissions';
+import { ROLE_PERMISSIONS } from '@/modules/auth/permissions';
 import type { StaffRole } from '@/shared/api/types';
 
 const OPS_SETTINGS = [
@@ -170,17 +170,6 @@ export function SettingsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-          <div className="border-t border-[var(--line)] px-4 py-3 text-xs text-[var(--ink-muted)]">
-            {STAFF_ROLES.map((r) => {
-              const paths = ROLE_NAV_PATHS[r];
-              return (
-                <p key={r} className="mt-1">
-                  <span className="font-medium">{t(`roles.${r}`)}:</span>{' '}
-                  {paths === '*' ? t('settingsPage.allPaths') : paths.join(', ')}
-                </p>
-              );
-            })}
           </div>
         </div>
       )}

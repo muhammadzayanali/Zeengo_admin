@@ -348,6 +348,8 @@ export interface ChatMessage {
   body: string;
   createdAt: string;
   senderType?: string;
+  /** Channel: admin (Support) | driver | splizer */
+  senderRole?: 'admin' | 'driver' | 'splizer' | null;
   senderName?: string | null;
   senderStaffId?: string | null;
   senderClientId?: string | null;

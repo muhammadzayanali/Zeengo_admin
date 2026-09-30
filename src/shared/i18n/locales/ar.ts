@@ -707,6 +707,12 @@ const ar: TranslationSchema = {
     clientThread: 'محادثة عميل',
     realtime: 'مباشر · WebSocket',
     typing: 'شخص يكتب…',
+    laneSupport: 'الدعم',
+    laneDriver: 'السائق',
+    laneSplizer: 'سبلايزر',
+    yourLane: 'قناتك',
+    allLanes: 'كل القنوات',
+    clientInbox: 'وارد الضيوف',
   },
 
   notificationsPage: {

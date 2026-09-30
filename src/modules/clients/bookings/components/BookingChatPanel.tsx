@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Button, ErrorState, Input, Skeleton, useToast } from '@/shared/ui';
 import { ApiClientError } from '@/shared/api/client';
 import { chatApi, chatKeys } from '@/modules/tools/chat/services/chat.api';
@@ -8,6 +9,7 @@ import {
   getOpsSocket,
   setActiveChatConversationId,
 } from '@/shared/realtime/useOpsRealtime';
+import type { ChatMessage } from '@/shared/api/types';
 
 type Props = { bookingId: string };
 
@@ -21,7 +23,17 @@ function elapsedLabel(iso: string | null) {
   return `${Math.floor(hours / 24)}d`;
 }
 
+function laneLabel(
+  role: ChatMessage['senderRole'],
+  t: (k: string) => string,
+): string {
+  if (role === 'driver') return t('chat.laneDriver');
+  if (role === 'splizer') return t('chat.laneSplizer');
+  return t('chat.laneSupport');
+}
+
 export function BookingChatPanel({ bookingId }: Props) {
+  const { t } = useTranslation();
   const { push } = useToast();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -39,7 +51,7 @@ export function BookingChatPanel({ bookingId }: Props) {
     queryKey: chatKeys.messages(conversationId),
     queryFn: ({ signal }) => chatApi.messages(conversationId, { limit: 100 }, signal),
     enabled: Boolean(conversationId),
-    refetchInterval: 20_000,
+    refetchInterval: 60_000,
   });
 
   useEffect(() => {
@@ -96,12 +108,14 @@ export function BookingChatPanel({ bookingId }: Props) {
   return (
     <div className="flex h-[min(32rem,65vh)] flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] shadow-[var(--shadow)]">
       <div className="border-b border-[var(--line)] px-4 py-3">
-        <p className="text-sm font-semibold text-[var(--ink)]">Booking support</p>
+        <p className="text-sm font-semibold text-[var(--ink)]">{t('operations.clientChat')}</p>
         <p className="text-xs text-[var(--ink-muted)]">
           {thread.data.znCode ?? bookingId.slice(0, 8)}
           {thread.data.clientName ? ` · ${thread.data.clientName}` : ''}
           {' · '}
-          realtime
+          {t('chat.yourLane')}
+          {' · '}
+          {t('chat.realtime')}
         </p>
       </div>
 
@@ -118,7 +132,7 @@ export function BookingChatPanel({ bookingId }: Props) {
           />
         ) : null}
         {!messages.isLoading && !messages.isError && !rows.length ? (
-          <p className="text-sm text-[var(--ink-muted)]">No messages yet. Start the conversation.</p>
+          <p className="text-sm text-[var(--ink-muted)]">{t('chat.emptyThread')}</p>
         ) : null}
         {rows.map((m) => {
           const mine = m.senderStaffId
@@ -135,11 +149,14 @@ export function BookingChatPanel({ bookingId }: Props) {
               }
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-[var(--ink)]">
+                <span className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-[var(--ink)]">
                   {mine
-                    ? 'You'
+                    ? t('chat.you')
                     : m.senderName ??
-                      (m.senderType === 'client' ? 'Client' : 'Staff')}
+                      (m.senderType === 'client' ? t('chat.client') : t('chat.staff'))}
+                  <span className="rounded-full bg-[var(--bg-elevated)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-muted)] ring-1 ring-[var(--line)]">
+                    {laneLabel(m.senderRole, t)}
+                  </span>
                 </span>
                 <span className="text-[11px] text-[var(--ink-muted)]">
                   {elapsedLabel(m.createdAt)}
@@ -167,10 +184,10 @@ export function BookingChatPanel({ bookingId }: Props) {
           className="flex-1"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Write a message…"
+          placeholder={t('chat.writeMessage')}
         />
         <Button type="submit" disabled={!text.trim()} loading={send.isPending}>
-          Send
+          {t('chat.send')}
         </Button>
       </form>
     </div>

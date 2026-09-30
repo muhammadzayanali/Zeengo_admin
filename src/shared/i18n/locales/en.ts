@@ -705,6 +705,12 @@ const en = {
     clientThread: 'Client thread',
     realtime: 'Live · WebSocket',
     typing: 'Someone is typing…',
+    laneSupport: 'Support',
+    laneDriver: 'Driver',
+    laneSplizer: 'Splizer',
+    yourLane: 'Your lane',
+    allLanes: 'All lanes',
+    clientInbox: 'Guest inbox',
   },
 
   notificationsPage: {
