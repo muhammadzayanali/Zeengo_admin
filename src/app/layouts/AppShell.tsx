@@ -61,20 +61,20 @@ export function AppShell() {
 
         <aside
           className={cn(
-            'w-[260px] shrink-0 flex-col border-e border-[var(--shell-line)] bg-[var(--shell)] lg:static lg:z-auto lg:flex lg:pt-0',
+            'w-[260px] shrink-0 flex-col border-e border-[var(--shell-line)] bg-[var(--shell)] text-white lg:static lg:z-auto lg:flex lg:pt-0',
             navOpen
               ? 'fixed inset-y-0 start-0 z-40 flex pt-16 lg:static lg:pt-0'
               : 'hidden lg:flex',
           )}
         >
           <div className="hidden border-b border-[var(--shell-line)] px-3 py-3 lg:block">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--shell-muted)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
               {t('nav.commandCenter')}
             </p>
             <NavLink
               to={homePath}
               end
-              className="mt-1 block text-sm font-semibold text-[var(--shell-ink)]"
+              className="mt-1 block text-sm font-semibold text-white"
             >
               {t('brand')} Ops
             </NavLink>

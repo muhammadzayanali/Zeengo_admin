@@ -141,8 +141,8 @@ export function Sidebar({
               className={cn(
                 'flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em]',
                 sectionActive
-                  ? 'text-[#C7A96B]'
-                  : 'text-[var(--shell-muted)] hover:bg-[var(--shell-elevated)] hover:text-[var(--shell-ink)]',
+                  ? 'text-white'
+                  : 'text-white/80 hover:bg-[var(--shell-elevated)] hover:text-white',
               )}
             >
               <span>{t(section.sectionKey)}</span>
@@ -168,8 +168,8 @@ export function Sidebar({
                           cn(
                             'flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors',
                             isActive
-                              ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
-                              : 'text-[var(--shell-muted)] hover:bg-[var(--shell-elevated)] hover:text-[var(--shell-ink)]',
+                              ? 'bg-white/15 text-white'
+                              : 'text-white hover:bg-white/10 hover:text-white',
                           )
                         }
                       >

@@ -21,8 +21,8 @@
   --shell: #12372a;
   --shell-elevated: #0e2c22;
   --shell-line: rgba(199, 169, 107, 0.28);
-  --shell-ink: #f3eee4;
-  --shell-muted: #c5d0c8;
+  --shell-ink: #ffffff;
+  --shell-muted: rgba(255, 255, 255, 0.82);
   --space-1: 8px;
   --space-2: 16px;
   --space-3: 24px;
