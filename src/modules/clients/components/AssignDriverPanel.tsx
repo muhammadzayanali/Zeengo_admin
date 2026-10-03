@@ -84,7 +84,7 @@ export function AssignDriverPanel({ booking, onClose }: Props) {
       </h3>
       <p className="mb-3 text-xs text-[var(--ink-muted)]">
         Sends a pending assignment. The driver must accept before the guest sees
-        a confirmed driver and Driver chat unlocks.
+        a confirmed driver and Driver chat becomes available.
       </p>
       <Select value={driverId} onChange={(e) => setDriverId(e.target.value)}>
         <option value="">— Remove driver —</option>

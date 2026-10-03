@@ -141,7 +141,7 @@ export function Sidebar({
               className={cn(
                 'flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.14em]',
                 sectionActive
-                  ? 'text-[var(--accent)]'
+                  ? 'text-[#C7A96B]'
                   : 'text-[var(--shell-muted)] hover:bg-[var(--shell-elevated)] hover:text-[var(--shell-ink)]',
               )}
             >
