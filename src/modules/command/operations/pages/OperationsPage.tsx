@@ -292,8 +292,18 @@ export function OperationsPage() {
             onClick={() => setBoard('master')}
           />
           <StatsCard
-            label={t('operations.revenueToday')}
-            value={k ? formatMoney(k.revenueToday) : '—'}
+            label={t('operations.collected')}
+            value={k ? formatMoney(k.revenueTotal ?? k.revenueToday) : '—'}
+            tone="success"
+            hint={
+              k
+                ? t('operations.collectedHint', {
+                    today: formatMoney(k.revenueToday),
+                    cash: formatMoney(k.cashTotal ?? 0),
+                  })
+                : undefined
+            }
+            onClick={() => navigate('/finance')}
           />
           <StatsCard
             label={t('operations.driversInField')}

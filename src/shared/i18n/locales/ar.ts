@@ -81,6 +81,7 @@ const ar: TranslationSchema = {
     packages: 'الباقات',
     users: 'المستخدمون',
     roles: 'الأدوار',
+    auditLogs: 'سجل التدقيق',
     settings: 'الإعدادات',
     ai: 'وكيل العمليات',
     aiParser: 'محلل الذكاء الاصطناعي',
@@ -141,6 +142,8 @@ const ar: TranslationSchema = {
     urgentTasks: 'المهام العاجلة',
     driversInField: 'السائقون في الميدان',
     revenueToday: 'إيرادات اليوم',
+    collected: 'المحصّل',
+    collectedHint: 'اليوم {{today}} · نقداً {{cash}}',
     todaysItinerary: 'برنامج اليوم',
     unassignedClients: 'عملاء غير معيّنين',
     opsQueue: 'قائمة العمليات',
@@ -914,6 +917,8 @@ const ar: TranslationSchema = {
     collectMan: 'محصّل',
     activeClients: 'عملاء نشطون',
     revenueToday: 'إيراد اليوم',
+    collected: 'المحصّل',
+    collectedHint: 'اليوم {{today}} · نقداً {{cash}}',
     driversInField: 'سائقون في الميدان',
     todaysItinerary: 'برنامج اليوم',
     unassigned: 'عملاء بلا تعيين',
@@ -954,7 +959,8 @@ const ar: TranslationSchema = {
 
   rolesPage: {
     title: 'الأدوار',
-    description: 'الموظفون حسب الدور ومصفوفة الصلاحيات التي تتحكم في التطبيق فعلياً.',
+    description:
+      'أدوار ثابتة (StaffRole). الواجهة الخلفية هي المرجع — هذه الصفحة لا تنشئ أدواراً مخصصة.',
     manageUsers: 'إدارة المستخدمين',
     noStaff: 'لا أحد في هذا الدور',
     matrix: 'مصفوفة الصلاحيات',

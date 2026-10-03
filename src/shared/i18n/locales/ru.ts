@@ -78,6 +78,7 @@ const ru = {
     packages: 'Пакеты',
     users: 'Пользователи',
     roles: 'Роли',
+    auditLogs: 'Журнал аудита',
     settings: 'Настройки',
     masterDataImport: 'Импорт из Excel',
     ai: 'Ops Agent',
@@ -139,6 +140,8 @@ const ru = {
     urgentTasks: 'Срочные задачи',
     driversInField: 'Водители на линии',
     revenueToday: 'Выручка сегодня',
+    collected: 'Собрано',
+    collectedHint: 'Сегодня {{today}} · Наличные {{cash}}',
     todaysItinerary: 'Маршрут на сегодня',
     unassignedClients: 'Клиенты без назначения',
     opsQueue: 'Очередь операций',
@@ -919,6 +922,8 @@ const ru = {
     collectMan: 'Сборщик',
     activeClients: 'Активные клиенты',
     revenueToday: 'Выручка сегодня',
+    collected: 'Собрано',
+    collectedHint: 'Сегодня {{today}} · Наличные {{cash}}',
     driversInField: 'Водители на линии',
     todaysItinerary: 'Маршрут на сегодня',
     unassigned: 'Клиенты без назначения',
@@ -959,7 +964,8 @@ const ru = {
 
   rolesPage: {
     title: 'Роли',
-    description: 'Сотрудники по ролям и матрица прав, которая реально ограничивает приложение.',
+    description:
+      'Фиксированные роли StaffRole. Backend задаёт права — эта страница не создаёт произвольные роли.',
     manageUsers: 'Управление пользователями',
     noStaff: 'В этой роли никого нет',
     matrix: 'Матрица прав',

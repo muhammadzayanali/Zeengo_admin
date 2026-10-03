@@ -62,15 +62,15 @@ export function LoginPage() {
           className="absolute inset-0"
           style={{
             backgroundImage:
-              'linear-gradient(160deg, rgba(17,17,17,0.55) 0%, rgba(17,17,17,0.25) 45%, rgba(17,17,17,0.75) 100%), radial-gradient(circle at 20% 20%, rgba(59,130,246,0.45) 0%, transparent 42%)',
+              'linear-gradient(165deg, rgba(18,55,42,0.55) 0%, rgba(18,55,42,0.18) 48%, rgba(18,55,42,0.78) 100%)',
           }}
           aria-hidden
         />
         <div className="relative text-white">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
+          <p className="text-[11px] font-medium tracking-[0.18em] uppercase text-[#C7A96B]">
             {t('brand')}
           </p>
-          <h1 className="mt-3 max-w-md text-5xl font-extrabold leading-tight">
+          <h1 className="mt-3 max-w-md text-4xl font-semibold leading-tight">
             {t('login.heroTitle')}
           </h1>
           <p className="mt-4 max-w-sm text-base text-white/80">

@@ -16,6 +16,9 @@ import { NewTaskPanel } from '@/modules/clients/components/NewTaskPanel';
 import { ClientEditForm } from '@/modules/clients/components/ClientEditForm';
 import { BookingAttachVendorDialog } from '../components/BookingAttachVendorDialog';
 import { BookingChatPanel } from '../components/BookingChatPanel';
+import { CustomerRequestItems } from '../components/CustomerRequestItems';
+import { BookingDocumentsPanel } from '../components/BookingDocumentsPanel';
+import { formatRequestMoney } from '../lib/requestMoney';
 import { vendorsApi } from '@/modules/fleet/vendors/services/vendors.api';
 import {
   Badge,
@@ -278,7 +281,10 @@ export function BookingDetailPage() {
   const itinerary = useQuery({
     queryKey: ['bookings', id, 'itinerary'],
     queryFn: ({ signal }) => itinerariesApi.forBooking(id, signal),
-    enabled: Boolean(id) && tab === 'program',
+    enabled:
+      Boolean(id) &&
+      (tab === 'program' ||
+        Boolean(booking.data?.source && booking.data.source !== 'staff')),
   });
 
   const staffUsers = useQuery({
@@ -287,11 +293,18 @@ export function BookingDetailPage() {
     enabled: panel === 'guide' || tab === 'guide',
   });
 
+  const history = useQuery({
+    queryKey: ['bookings', id, 'history'],
+    queryFn: ({ signal }) => bookingsApi.history(id, signal),
+    enabled: Boolean(id) && tab === 'history',
+  });
+
   const invalidateAll = async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ['bookings', id] }),
       qc.invalidateQueries({ queryKey: ['operations', 'booking', id] }),
       qc.invalidateQueries({ queryKey: ['bookings', id, 'itinerary'] }),
+      qc.invalidateQueries({ queryKey: ['bookings', id, 'history'] }),
       qc.invalidateQueries({ queryKey: ['bookings'] }),
       qc.invalidateQueries({ queryKey: ['operations'] }),
     ]);
@@ -646,6 +659,19 @@ export function BookingDetailPage() {
               </div>
             ) : null}
           </div>
+          <CustomerRequestItems
+            bookingId={id}
+            items={itineraryItems}
+            loading={itinerary.isLoading}
+            totalAmount={b.totalAmount}
+            canWrite={canWrite && b.requestStatus !== 'rejected'}
+            onSaved={invalidateAll}
+          />
+          {canWrite && b.requestStatus !== 'rejected' && !(Number(b.totalAmount) > 0) ? (
+            <p className="mt-2 text-xs text-[var(--warning)]">
+              Final total is not set — the customer sees 0 due until you save it.
+            </p>
+          ) : null}
         </Card>
       ) : null}
 
@@ -1004,6 +1030,18 @@ export function BookingDetailPage() {
                           <p className="text-[var(--ink-muted)]">
                             {item.startTime ?? ''} {item.locationName ?? ''}
                           </p>
+                          {item.customerRequest ? (
+                            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
+                              <Badge tone="accent">Customer request</Badge>
+                              {item.description ?? ''}
+                              {item.customerRequest.indicativePrice
+                                ? ` · indicative ${formatRequestMoney(
+                                    item.customerRequest.indicativePrice.amount,
+                                    item.customerRequest.indicativePrice.currency,
+                                  )}`
+                                : ''}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge>{item.status}</Badge>
@@ -1418,19 +1456,42 @@ export function BookingDetailPage() {
 
         {tab === 'documents' ? (
           <SectionCard title="Documents">
-            <EmptyState
-              title="Document storage is not yet configured"
-              description="No Document model or upload storage exists in the backend. Phase 1 does not fake uploads."
-            />
+            <BookingDocumentsPanel bookingId={id} />
           </SectionCard>
         ) : null}
 
         {tab === 'history' ? (
           <SectionCard title="History">
-            <EmptyState
-              title="Booking history is not yet available"
-              description="AuditLog exists but there is no booking History read API. Phase 1 does not invent activity rows."
-            />
+            {history.isLoading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : history.isError ? (
+              <ErrorState
+                title="Could not load history"
+                onRetry={() => void history.refetch()}
+              />
+            ) : !history.data?.length ? (
+              <EmptyState
+                title="No recorded activity yet"
+                description="Creates, payments, SOS, edit requests and ZN logins for this booking will appear here."
+              />
+            ) : (
+              <ul className="divide-y divide-[var(--line)]">
+                {history.data.map((row) => (
+                  <li key={row.id} className="flex items-start justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{row.summary}</p>
+                      <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
+                        {row.actorType}
+                        {row.entity ? ` · ${row.entity}` : ''}
+                      </p>
+                    </div>
+                    <time className="shrink-0 text-xs text-[var(--ink-muted)]">
+                      {new Date(row.createdAt).toLocaleString()}
+                    </time>
+                  </li>
+                ))}
+              </ul>
+            )}
           </SectionCard>
         ) : null}
       </div>

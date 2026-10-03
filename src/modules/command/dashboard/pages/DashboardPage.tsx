@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   Car,
@@ -54,6 +55,7 @@ function vehicleLabel(d: DashboardDriverCard) {
 }
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { push } = useToast();
   const qc = useQueryClient();
@@ -138,7 +140,9 @@ export function DashboardPage() {
             `# End of Day Report`,
             ``,
             `- Active clients: ${k.activeClients}`,
+            `- Collected: ${formatMoney(k.revenueTotal ?? 0)}`,
             `- Revenue today: ${formatMoney(k.revenueToday)}`,
+            `- Cash: ${formatMoney(k.cashTotal ?? 0)}`,
             `- Drivers in field: ${k.driversInField}`,
             `- Itinerary items: ${k.todaysItinerary} (${k.itineraryProgress ?? 0}%)`,
             `- Urgent tasks: ${k.urgentTasks}`,
@@ -268,19 +272,14 @@ export function DashboardPage() {
           onClick={() => navigate('/drivers')}
         />
         <StatsCard
-          label="Revenue today"
-          value={formatMoney(k.revenueToday)}
+          label={t('dashboard.collected')}
+          value={formatMoney(k.revenueTotal ?? k.revenueToday)}
           tone="success"
           icon={<Wallet className="h-4 w-4" />}
-          hint={
-            (k.revenueTotal ?? 0) > 0
-              ? `Total collected ${formatMoney(k.revenueTotal ?? 0)}${
-                  (k.cashTotal ?? 0) > 0
-                    ? ` · cash ${formatMoney(k.cashTotal ?? 0)}`
-                    : ''
-                }`
-              : 'Open Finance for ledger'
-          }
+          hint={t('dashboard.collectedHint', {
+            today: formatMoney(k.revenueToday),
+            cash: formatMoney(k.cashTotal ?? 0),
+          })}
           onClick={() => navigate('/finance')}
         />
         <StatsCard

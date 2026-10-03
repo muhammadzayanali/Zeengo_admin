@@ -34,7 +34,7 @@ export const Button = forwardRef<
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50',
+        'inline-flex items-center justify-center gap-2 rounded-[var(--radius)] px-4 py-2.5 text-sm font-medium transition disabled:opacity-50',
         styles,
         className,
       )}
@@ -53,7 +53,7 @@ export const Input = forwardRef<
     <input
       ref={ref}
       className={cn(
-        'w-full rounded-xl border border-[var(--line)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]',
+        'w-full rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]',
         className,
       )}
       {...props}
@@ -69,7 +69,7 @@ export const Textarea = forwardRef<
     <textarea
       ref={ref}
       className={cn(
-        'w-full rounded-xl border border-[var(--line)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]',
+        'w-full rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-sm outline-none placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)]',
         className,
       )}
       {...props}
@@ -85,7 +85,7 @@ export const Select = forwardRef<
     <select
       ref={ref}
       className={cn(
-        'w-full rounded-xl border border-[var(--line)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)]',
+        'w-full rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)]',
         className,
       )}
       {...props}
@@ -187,7 +187,7 @@ export function PageHeader({
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div
-      className={cn('animate-pulse rounded-xl bg-[var(--bg-muted)]', className)}
+      className={cn('animate-pulse rounded-[var(--radius)] bg-[var(--bg-muted)]', className)}
       aria-hidden
     />
   );

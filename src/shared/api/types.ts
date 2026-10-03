@@ -258,6 +258,29 @@ export interface Vendor {
   activeBookingsCount?: number;
   createdAt?: string;
   updatedAt?: string;
+  nameEn?: string | null;
+  nameAr?: string | null;
+  nameRu?: string | null;
+  summary?: string | null;
+  summaryAr?: string | null;
+  address?: string | null;
+  area?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  stars?: number | null;
+  rating?: number | null;
+  ratingCount?: number | null;
+  images?: string[];
+  priceFrom?: number | null;
+  priceCurrency?: string;
+  priceUnit?: string | null;
+  category?: string | null;
+  durationLabel?: string | null;
+  languages?: string | null;
+  website?: string | null;
+  yandexMapsUrl?: string | null;
+  isPublished?: boolean;
+  dataSource?: string | null;
 }
 
 export interface VendorBookingRow {
@@ -396,8 +419,21 @@ export interface ItineraryItem {
   driverId?: string | null;
   status: string;
   sortOrder?: number;
+  notes?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  customerRequest?: CustomerRequestSummary | null;
+}
+
+export interface CustomerRequestSummary {
+  kind: string;
+  pax: number | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  rooms: number | null;
+  roomName: string | null;
+  time: string | null;
+  indicativePrice: { amount: number; currency: string; basis: string } | null;
 }
 
 export interface DailyOperationItem extends ItineraryItem {

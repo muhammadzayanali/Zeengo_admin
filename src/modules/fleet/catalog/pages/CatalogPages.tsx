@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { vendorKeys, vendorsApi } from '@/modules/fleet/vendors/services/vendors.api';
+import { VendorListingDialog } from '@/modules/fleet/vendors/components/VendorListingDialog';
 import { bookingsApi } from '@/modules/clients/bookings/services/bookings.api';
 import {
   Button,
@@ -66,6 +67,7 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
   const q = useDebouncedValue(search);
   const [page, setPage] = useState(1);
   const [addOpen, setAddOpen] = useState(false);
+  const [listingId, setListingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Vendor | null>(null);
   const [assignId, setAssignId] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState('');
@@ -261,7 +263,12 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className="border-t border-[var(--line)]">
-                  <td className="px-4 py-3 font-medium">{row.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {row.name}
+                    {row.isPublished === false ? (
+                      <span className="ms-2 text-xs font-normal text-[var(--warning)]">Hidden on website</span>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3 text-[var(--ink-muted)]">{row.city || '—'}</td>
                   <td className="px-4 py-3">
                     <div>{row.contactName || '—'}</div>
@@ -283,6 +290,9 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
                         }}
                       >
                         {t('edit')}
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => setListingId(row.id)}>
+                        Website
                       </Button>
                       <Button type="button" variant="secondary" onClick={() => setAssignId(row.id)}>
                         {t('catalog.assign')}
@@ -392,6 +402,7 @@ export function CatalogTypePage({ type, titleKey, descriptionKey, emptyKey }: Pr
           </Button>
         </div>
       </DialogShell>
+      <VendorListingDialog vendorId={listingId} onClose={() => setListingId(null)} />
     </PageScaffold>
   );
 }
