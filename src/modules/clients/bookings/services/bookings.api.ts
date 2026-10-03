@@ -70,6 +70,20 @@ export const bookingsApi = {
   payments(id: string, signal?: AbortSignal) {
     return apiRequest<Payment[]>({ url: `/bookings/${id}/payments` }, signal);
   },
+  history(id: string, signal?: AbortSignal) {
+    return apiRequest<
+      Array<{
+        id: string;
+        actorType: string;
+        actorId: string | null;
+        action: string;
+        entity: string | null;
+        entityId: string | null;
+        createdAt: string;
+        summary: string;
+      }>
+    >({ url: `/bookings/${id}/history` }, signal);
+  },
   vendorBookings(id: string, signal?: AbortSignal) {
     return apiRequest<
       Array<{

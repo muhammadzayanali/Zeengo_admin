@@ -59,6 +59,10 @@ export function RolesPage() {
         <ErrorState title={t('users.loadFailed')} onRetry={() => void usersQuery.refetch()} />
       ) : (
         <div className="space-y-6">
+          <p className="rounded-[var(--radius)] border border-[var(--line)] bg-[var(--bg-muted)] px-4 py-3 text-sm text-[var(--ink-muted)]">
+            Support can operate bookings, chat, and SOS. Dashboard and finance stay
+            with Admin / Ops Manager — Support is sent to Clients, not a 403 page.
+          </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {STAFF_ROLES.map((role) => (
               <div

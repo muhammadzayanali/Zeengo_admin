@@ -30,6 +30,7 @@ import {
   Wrench,
   Handshake,
   ClipboardList,
+  ScrollText,
 } from 'lucide-react';
 import type { StaffRole } from '@/shared/api/types';
 import { ROLE_PERMISSIONS } from '@/modules/auth/permissions';
@@ -272,6 +273,12 @@ export const NAV_SECTIONS: NavSection[] = [
         labelKey: 'nav.users',
         roles: ROLE_PERMISSIONS.users,
         icon: UserCog,
+      },
+      {
+        to: '/audit-logs',
+        labelKey: 'nav.auditLogs',
+        roles: ROLE_PERMISSIONS.auditLogs,
+        icon: ScrollText,
       },
       {
         to: '/roles',

@@ -33,6 +33,7 @@ export const ROLE_PERMISSIONS = {
   guides: ['admin', 'ops_manager'] as StaffRole[],
   driverMe: ['driver'] as StaffRole[],
   masterDataImport: ['admin', 'ops_manager'] as StaffRole[],
+  auditLogs: ['admin', 'ops_manager'] as StaffRole[],
 } as const;
 
 export type PermissionKey = keyof typeof ROLE_PERMISSIONS;
@@ -75,6 +76,7 @@ export const ROLE_NAV_PATHS: Record<StaffRole, readonly string[] | '*'> = {
     '/ai',
     '/email',
     '/master-data-import',
+    '/audit-logs',
   ],
   splizer: ['/splizer', '/chat', '/russia-chatbot', '/notifications'],
   driver: ['/drivers', '/driver/me', '/chat', '/russia-chatbot', '/notifications'],

@@ -78,6 +78,7 @@ const en = {
     packages: 'Packages',
     users: 'Users',
     roles: 'Roles',
+    auditLogs: 'Audit logs',
     settings: 'Settings',
     masterDataImport: 'Excel Import',
     ai: 'Ops Agent',
@@ -139,6 +140,8 @@ const en = {
     urgentTasks: 'Urgent tasks',
     driversInField: 'Drivers in field',
     revenueToday: 'Revenue today',
+    collected: 'Collected',
+    collectedHint: 'Today {{today}} · Cash {{cash}}',
     todaysItinerary: "Today's itinerary",
     unassignedClients: 'Unassigned clients',
     opsQueue: 'Ops queue',
@@ -912,6 +915,8 @@ const en = {
     collectMan: 'Collect man',
     activeClients: 'Active clients',
     revenueToday: 'Revenue today',
+    collected: 'Collected',
+    collectedHint: 'Today {{today}} · Cash {{cash}}',
     driversInField: 'Drivers in field',
     todaysItinerary: "Today's itinerary",
     unassigned: 'Unassigned clients',
@@ -952,7 +957,8 @@ const en = {
 
   rolesPage: {
     title: 'Roles',
-    description: 'Live staff by role and the permission matrix that actually gates this app.',
+    description:
+      'Fixed StaffRole enum — backend is authoritative. This page does not create custom roles.',
     manageUsers: 'Manage users',
     noStaff: 'No one in this role',
     matrix: 'Permission matrix',

@@ -146,6 +146,9 @@ export function useOpsRealtime() {
       invalidate('dashboard');
       invalidate('operations');
     });
+    ns.on('document.uploaded', () => {
+      invalidate('bookings');
+    });
     ns.on('driver.updated', () => {
       invalidate('drivers');
       invalidate('dashboard');

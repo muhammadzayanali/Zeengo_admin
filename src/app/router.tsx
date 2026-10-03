@@ -162,6 +162,11 @@ const GuidesPage = lazy(() =>
 const RolesPage = lazy(() =>
   import('@/modules/admin/roles/pages/RolesPage').then((m) => ({ default: m.RolesPage })),
 );
+const AuditLogsPage = lazy(() =>
+  import('@/modules/admin/audit-logs/pages/AuditLogsPage').then((m) => ({
+    default: m.AuditLogsPage,
+  })),
+);
 const EmailPage = lazy(() =>
   import('@/modules/tools/email/pages/EmailPage').then((m) => ({ default: m.EmailPage })),
 );
@@ -487,6 +492,14 @@ export function AppRouter() {
             element={
               <L>
                 <RolesPage />
+              </L>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <L>
+                <AuditLogsPage />
               </L>
             }
           />
