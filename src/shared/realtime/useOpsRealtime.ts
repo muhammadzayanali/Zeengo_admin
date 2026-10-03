@@ -136,15 +136,23 @@ export function useOpsRealtime() {
       invalidate('bookings');
       invalidate('operations');
     });
-    ns.on('booking.created', () => {
+    ns.on('booking.created', (payload?: { znCode?: string | null }) => {
       invalidate('bookings');
       invalidate('dashboard');
       invalidate('operations');
+      invalidate('clients');
+      push({
+        tone: 'success',
+        title: payload?.znCode
+          ? `New booking request ${payload.znCode}`
+          : 'New booking request',
+      });
     });
     ns.on('booking.updated', () => {
       invalidate('bookings');
       invalidate('dashboard');
       invalidate('operations');
+      invalidate('clients');
     });
     ns.on('document.uploaded', () => {
       invalidate('bookings');
@@ -182,11 +190,15 @@ export function useOpsRealtime() {
     ns.on('assignment.cancelled', assignmentHandler);
     ns.on('notification.created', () => invalidate('notifications'));
     ns.on('notification.new', () => invalidate('notifications'));
+    ns.on('connect_error', (err) => {
+      console.warn('[ops realtime]', err.message);
+    });
     ns.on('edit_request.created', () => {
       invalidate('edit-requests');
       invalidate('dashboard');
       invalidate('bookings');
       invalidate('operations');
+      push({ tone: 'info', title: 'New edit request from a guest' });
     });
     ns.on('edit_request.updated', () => {
       invalidate('edit-requests');
